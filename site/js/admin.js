@@ -193,17 +193,20 @@
     btn.disabled = true;
     msg.classList.remove('erro');
     msg.textContent = 'Enviando…';
+    // Só adm convidado pode ganhar conta nova pelo link; os demais só recebem se já tiverem conta
+    const { data: convidado } = await sb.rpc('e_convidado', { p_email: email });
     const { error } = await sb.auth.signInWithOtp({
       email,
-      // não cria conta: só quem já foi cadastrado como adm recebe o link
-      options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: false },
+      options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: convidado === true },
     });
     btn.disabled = false;
     if (error) {
       msg.classList.add('erro');
       msg.textContent = error.status === 429 || /rate limit|security purposes/i.test(error.message)
         ? 'Muitos pedidos em pouco tempo. Espere alguns minutos e tente de novo.'
-        : 'Não foi possível enviar: ' + error.message;
+        : /signups not allowed/i.test(error.message)
+          ? 'Esse e-mail não está cadastrado como adm. Peça para um adm te convidar na aba Admins.'
+          : 'Não foi possível enviar: ' + error.message;
       return;
     }
     msg.textContent = `Pronto! Abra o link enviado para ${email}. Ao entrar, você vai criar sua senha. Se não aparecer, olhe o spam.`;
@@ -575,7 +578,7 @@
       sb.from('convites_admin').select('email').order('email'),
     ]).then(rs => rs.map(ok));
     $('#conteudo').innerHTML = `
-      <p class="painel-desc">Novo adm: adicione o e-mail aqui e crie a conta no Supabase (Authentication → Users → Add user → Create new user, com uma senha provisória). A conta já nasce adm. Tirar da lista não remove o acesso: use “Remover admin” abaixo.</p>
+      <p class="painel-desc">Novo adm: adicione o e-mail aqui. A pessoa entra em “Primeiro acesso”, recebe o link, já nasce adm e cria a senha. Tirar da lista não remove o acesso: use “Remover admin” abaixo.</p>
       <h2 class="adm-sub">Convites de admin</h2>
       <form class="adm-form" id="form-convite">
         <input type="email" id="convite-email" required placeholder="email@exemplo.com">
