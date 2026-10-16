@@ -1,0 +1,132 @@
+{
+  "temporada": "2026",
+  "atualizado_em": "2026-10-15",
+  "jogadores": [
+    {
+      "id": "bona",
+      "nome": "Bona",
+      "partidas": 18,
+      "gols": 32,
+      "assist": 28
+    },
+    {
+      "id": "bruninho",
+      "nome": "Bruninho",
+      "partidas": 21,
+      "gols": 49,
+      "assist": 26
+    },
+    {
+      "id": "caio-hideki",
+      "nome": "Caio Hideki",
+      "partidas": 21,
+      "gols": 41,
+      "assist": 24
+    },
+    {
+      "id": "erick",
+      "nome": "Erick",
+      "partidas": 14,
+      "gols": 84,
+      "assist": 43
+    },
+    {
+      "id": "felps",
+      "nome": "Felps",
+      "partidas": 26,
+      "gols": 68,
+      "assist": 63
+    },
+    {
+      "id": "flavio",
+      "nome": "Flavio",
+      "partidas": 18,
+      "gols": 65,
+      "assist": 29
+    },
+    {
+      "id": "giovani",
+      "nome": "Giovani",
+      "partidas": 25,
+      "gols": 73,
+      "assist": 37
+    },
+    {
+      "id": "joao",
+      "nome": "João",
+      "partidas": 18,
+      "gols": 56,
+      "assist": 22
+    },
+    {
+      "id": "leo",
+      "nome": "Leo",
+      "partidas": 26,
+      "gols": 74,
+      "assist": 41
+    },
+    {
+      "id": "martos",
+      "nome": "Martos",
+      "partidas": 16,
+      "gols": 39,
+      "assist": 23
+    },
+    {
+      "id": "noleto",
+      "nome": "Noleto",
+      "partidas": 21,
+      "gols": 65,
+      "assist": 36
+    },
+    {
+      "id": "pietro",
+      "nome": "Pietro",
+      "partidas": 14,
+      "gols": 48,
+      "assist": 41
+    },
+    {
+      "id": "queiroz",
+      "nome": "Queiroz",
+      "partidas": 28,
+      "gols": 49,
+      "assist": 56
+    },
+    {
+      "id": "renato",
+      "nome": "Renato",
+      "partidas": 23,
+      "gols": 74,
+      "assist": 30
+    },
+    {
+      "id": "roger",
+      "nome": "Roger",
+      "partidas": 28,
+      "gols": 83,
+      "assist": 111
+    },
+    {
+      "id": "rubens",
+      "nome": "Rubens",
+      "partidas": 27,
+      "gols": 20,
+      "assist": 23
+    },
+    {
+      "id": "yuri",
+      "nome": "Yuri",
+      "partidas": 24,
+      "gols": 37,
+      "assist": 27
+    },
+    {
+      "id": "zalaf",
+      "nome": "Zalaf",
+      "partidas": 21,
+      "gols": 17,
+      "assist": 14
+    }
+  ]
+}
