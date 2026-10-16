@@ -272,9 +272,9 @@
 
     const destaques = (g === 's' ? ['mvp_s', 'totw', 'gart_s'] : ['potm', 'mvp_m', 'gart_m']).map(k => {
       const h = HON[k];
-      const rs = topPor(state.jogadores, j => honra(j, k)).filter(r => r.pos <= 3).slice(0, 5);
+      const rs = topPor(state.jogadores, j => honra(j, k));
       return `<article class="podio">
-        <header><span class="podio-ic">${h.ic}</span><div><b>${h.nome}</b><small>${h.desc}</small></div></header>
+        <header><span class="podio-ic">${h.ic}</span><div><b>${h.nome}</b><small>${h.desc} · ${rs.length} jogador${rs.length === 1 ? "" : "es"}</small></div></header>
         <ol>${rs.map(r => `<li data-pos="${r.pos}" data-jogador="${r.j.id}"><span class="p">${r.pos}º</span><span class="n">${esc(r.j.nome)}</span><span class="v num">${r.valor}×</span></li>`).join('') || '<li class="vazio">Ninguém ainda</li>'}</ol>
       </article>`;
     }).join('');

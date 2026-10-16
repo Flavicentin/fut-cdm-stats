@@ -471,3 +471,6 @@ body.travado { overflow: hidden; }
   .duelista { padding: 12px; }
   .duelista-nome { font-size: 28px; }
 }
+
+/* Pódios com a lista completa: rolagem própria quando passa de ~7 nomes */
+.podio ol { max-height: 330px; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; scrollbar-width: thin; }
