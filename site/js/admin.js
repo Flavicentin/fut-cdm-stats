@@ -68,7 +68,7 @@
 
   function mostrar(tela) {
     $('#carregando').hidden = true;
-    for (const t of ['login', 'sem-acesso', 'painel']) $(`#tela-${t}`).hidden = t !== tela;
+    for (const t of ['login', 'painel']) $(`#tela-${t}`).hidden = t !== tela;
   }
 
   function marcarSujo(v = true) {
@@ -137,13 +137,15 @@
     $('#usuario-email').textContent = st.usuario?.email || '';
     if (!st.usuario) return mostrar('login');
     try {
-      // Quem não é admin vê o mesmo painel em modo leitura
-      st.leitura = !ok(await sb.rpc('is_admin'));
-      document.body.classList.toggle('modo-leitura', st.leitura);
-      $('#painel-titulo').textContent = st.leitura ? 'Ver dados' : 'Editar dados';
-      if (st.leitura && st.aba === 'admins') st.aba = 'temporada';
+      // A área é só dos adms: quem não é adm é deslogado e usa o site público
+      if (!ok(await sb.rpc('is_admin'))) {
+        st.pedirSenha = false;
+        await sb.auth.signOut();
+        return msgLogin('Este acesso é só para os adms. Os números estão no site público.', true);
+      }
       await carregarBase();
       mostrar('painel');
+      if (st.pedirSenha) { st.pedirSenha = false; abrirSenha(true); }
       await abrirAba(st.aba);
     } catch (e) {
       console.error(e);
@@ -153,27 +155,60 @@
     }
   }
 
-  async function enviarLink(ev) {
+  function msgLogin(texto, erro = false) {
+    $('#login-msg').textContent = texto;
+    $('#login-msg').classList.toggle('erro', erro);
+  }
+
+  // Login normal: e-mail + senha (não envia e-mail, então não esbarra no limite do Supabase)
+  async function entrarComSenha(ev) {
     ev.preventDefault();
-    const email = $('#login-email').value.trim().toLowerCase();
-    const msg = $('#login-msg');
     const btn = $('#form-login button');
+    btn.disabled = true;
+    msgLogin('Entrando…');
+    const { error } = await sb.auth.signInWithPassword({
+      email: $('#login-email').value.trim().toLowerCase(),
+      password: $('#login-senha').value,
+    });
+    btn.disabled = false;
+    if (error) {
+      return msgLogin(/invalid login credentials/i.test(error.message)
+        ? 'E-mail ou senha errados. Se ainda não criou senha, use “Primeiro acesso” abaixo.'
+        : 'Não foi possível entrar: ' + error.message, true);
+    }
+    $('#login-senha').value = '';
+    msgLogin('');
+  }
+
+  // Primeiro acesso / esqueci a senha: link + código por e-mail; depois de entrar, cria a senha
+  async function enviarLink() {
+    const campo = $('#login-email');
+    const email = campo.value.trim().toLowerCase();
+    if (!email || !campo.checkValidity()) {
+      campo.focus();
+      return msgLogin('Digite seu e-mail acima.', true);
+    }
+    const msg = $('#login-msg');
+    const btn = $('#btn-link');
     btn.disabled = true;
     msg.classList.remove('erro');
     msg.textContent = 'Enviando…';
     const { error } = await sb.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: location.origin + location.pathname },
+      // não cria conta: só quem já foi cadastrado como adm recebe o código
+      options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: false },
     });
     btn.disabled = false;
     if (error) {
+      const limite = error.status === 429 || /rate limit|security purposes/i.test(error.message);
       msg.classList.add('erro');
-      msg.textContent = error.status === 429 || /rate limit|security purposes/i.test(error.message)
-        ? 'Muitos pedidos em pouco tempo. Espere alguns minutos e tente de novo.'
+      msg.textContent = limite
+        ? 'Muitos pedidos em pouco tempo. Espere alguns minutos. Se já recebeu um código, digite abaixo.'
         : 'Não foi possível enviar: ' + error.message;
+      if (limite) $('#form-codigo').hidden = false;
       return;
     }
-    msg.textContent = `Pronto! Abra o link enviado para ${email} neste navegador, ou digite aqui o código do e-mail. Se não aparecer, olhe o spam.`;
+    msg.textContent = `Pronto! Digite aqui o código enviado para ${email} (ou abra o link neste navegador). Se não aparecer, olhe o spam.`;
     $('#form-codigo').hidden = false;
     $('#login-codigo').focus();
   }
@@ -195,9 +230,41 @@
       msg.textContent = 'Código inválido ou expirado. Confira ou peça um novo.';
       return;
     }
+    st.pedirSenha = true;
     $('#form-codigo').hidden = true;
     $('#login-codigo').value = '';
     msg.textContent = '';
+  }
+
+  function abrirSenha(boasVindas = false) {
+    $('#senha-titulo').textContent = boasVindas
+      ? 'Crie uma senha para entrar direto da próxima vez, sem esperar e-mail.'
+      : 'Criar ou trocar sua senha';
+    $('#senha-msg').textContent = '';
+    $('#form-senha').hidden = false;
+    $('#nova-senha').focus();
+  }
+
+  async function salvarSenha(ev) {
+    ev.preventDefault();
+    const senha = $('#nova-senha').value;
+    const msg = $('#senha-msg');
+    msg.classList.add('erro');
+    if (senha.length < 8) return (msg.textContent = 'Use pelo menos 8 caracteres.');
+    if (senha !== $('#nova-senha-2').value) return (msg.textContent = 'As duas senhas não são iguais.');
+    const btn = $('#form-senha button[type=submit]');
+    btn.disabled = true;
+    const { error } = await sb.auth.updateUser({ password: senha });
+    btn.disabled = false;
+    if (error) {
+      msg.textContent = /different from the old/i.test(error.message)
+        ? 'A nova senha precisa ser diferente da atual.'
+        : 'Não foi possível salvar: ' + error.message;
+      return;
+    }
+    $('#form-senha').reset();
+    $('#form-senha').hidden = true;
+    toast('Senha salva. Da próxima vez entre com e-mail e senha.');
   }
 
   /* ---------------- Dados base ---------------- */
@@ -409,15 +476,13 @@
   function renderGrade() {
     const a = ABAS[st.aba];
     const cols = a.cols();
-    const edita = !st.leitura;
-    const podeRemover = edita && a.podeRemover;
     const seletorMes = st.aba === 'mes' ? `
       <select id="sel-mes" aria-label="Mês">
         ${[...new Set([...st.meses, st.mes])].sort().map(m => `<option value="${m}" ${m === st.mes ? 'selected' : ''}>${NOME_MES[+m.slice(5, 7)]} ${m.slice(0, 4)}${st.meses.includes(m) ? '' : ' (novo)'}</option>`).join('')}
       </select>
-      ${edita ? `<input type="month" id="novo-mes" aria-label="Abrir outro mês">
-      <button class="btn" id="btn-novo-mes">Abrir mês</button>` : ''}` : '';
-    const adicionar = edita && a.podeAdicionar ? `
+      <input type="month" id="novo-mes" aria-label="Abrir outro mês">
+      <button class="btn" id="btn-novo-mes">Abrir mês</button>` : '';
+    const adicionar = a.podeAdicionar ? `
       <div class="adm-add">
         <input list="lista-jogadores" id="add-nome" placeholder="Nome do jogador" autocomplete="off">
         <button class="btn" id="btn-add">Adicionar</button>
@@ -432,7 +497,7 @@
     $('#conteudo').innerHTML = `
       <p class="painel-desc">${a.desc}</p>
       <div class="adm-barra">${seletorMes}</div>
-      ${edita ? `<details class="adm-csv" ${st.avisos.length ? 'open' : ''}>
+      <details class="adm-csv" ${st.avisos.length ? 'open' : ''}>
         <summary>📋 Colar da planilha (aba ${esc(a.csv)})</summary>
         <p>Selecione a aba inteira no Google Planilhas (Ctrl+A), copie (Ctrl+C) e cole aqui. Também aceita o conteúdo de um .csv exportado. Nada é gravado até você clicar em Salvar.</p>
         <textarea id="csv" placeholder="Jogadores,Gols,Assist,…"></textarea>
@@ -445,24 +510,23 @@
         <span class="adm-sujo" id="aviso-sujo" ${st.sujo ? '' : 'hidden'}>Alterações não salvas</span>
         <button class="btn" id="btn-desfazer">Recarregar</button>
         <button class="btn btn-primario" id="btn-salvar">Salvar</button>
-      </div>` : ''}
+      </div>
       <div class="adm-tabela-box">
         ${st.linhas.length ? `
         <table class="adm-tabela">
-          <thead><tr><th>Jogador</th>${cols.map(c => `<th title="${esc(c.t || c.r)}" class="${c.g === 'm' ? 'grupo-m' : ''}">${esc(c.r)}</th>`).join('')}${podeRemover ? '<th></th>' : ''}</tr></thead>
+          <thead><tr><th>Jogador</th>${cols.map(c => `<th title="${esc(c.t || c.r)}" class="${c.g === 'm' ? 'grupo-m' : ''}">${esc(c.r)}</th>`).join('')}${a.podeRemover ? '<th></th>' : ''}</tr></thead>
           <tbody>${st.linhas.map((l, i) => `
             <tr class="${l.novo ? 'novo' : l.convidado ? 'convidado' : ''}">
               <td>${esc(l.nome)}</td>
               ${cols.map(c => {
                 const v = l.v[c.k];
                 const mostra = v == null || (c.h && !v) ? '' : v;
-                if (!edita) return `<td class="${c.h ? 'h' : ''} ${c.g === 'm' ? 'grupo-m' : ''}"><span class="valor">${mostra}</span></td>`;
                 return `<td class="${c.h ? 'h' : ''} ${c.g === 'm' ? 'grupo-m' : ''}"><input type="number" min="0" max="${a.vazioEhNulo ? 99 : ''}" inputmode="numeric" data-i="${i}" data-k="${c.k}" value="${mostra}" aria-label="${esc(l.nome)} · ${esc(c.t || c.r)}"></td>`;
               }).join('')}
-              ${podeRemover ? `<td><button class="remover" data-remover="${i}" aria-label="Remover ${esc(l.nome)}">×</button></td>` : ''}
+              ${a.podeRemover ? `<td><button class="remover" data-remover="${i}" aria-label="Remover ${esc(l.nome)}">×</button></td>` : ''}
             </tr>`).join('')}
           </tbody>
-        </table>` : `<p class="adm-vazio">${st.leitura ? 'Nada cadastrado ainda.' : st.aba === 'temporada' || st.aba === 'mes' ?'Nenhum jogador ainda. Adicione ou cole da planilha.' : 'O elenco da temporada está vazio. Cadastre os jogadores na aba Temporada.'}</p>`}
+        </table>` : `<p class="adm-vazio">${st.aba === 'temporada' || st.aba === 'mes' ?'Nenhum jogador ainda. Adicione ou cole da planilha.' : 'O elenco da temporada está vazio. Cadastre os jogadores na aba Temporada.'}</p>`}
       </div>
       ${conferencia}`;
   }
@@ -524,7 +588,7 @@
       sb.from('convites_admin').select('email').order('email'),
     ]).then(rs => rs.map(ok));
     $('#conteudo').innerHTML = `
-      <p class="painel-desc">E-mails na lista de convites viram admin ao entrar pela primeira vez (ou na hora, se já têm conta). Tirar da lista não remove o acesso: use “Remover admin” abaixo.</p>
+      <p class="painel-desc">Novo adm: adicione o e-mail aqui e crie a conta no Supabase (Authentication → Users → Add user → Create new user, com uma senha provisória). A conta já nasce adm. Tirar da lista não remove o acesso: use “Remover admin” abaixo.</p>
       <h2 class="adm-sub">Convites de admin</h2>
       <form class="adm-form" id="form-convite">
         <input type="email" id="convite-email" required placeholder="email@exemplo.com">
@@ -556,8 +620,12 @@
 
   /* ---------------- Eventos ---------------- */
   function ligarEventos() {
-    $('#form-login').addEventListener('submit', enviarLink);
+    $('#form-login').addEventListener('submit', entrarComSenha);
+    $('#btn-link').addEventListener('click', enviarLink);
     $('#form-codigo').addEventListener('submit', entrarComCodigo);
+    $('#form-senha').addEventListener('submit', salvarSenha);
+    $('#btn-senha').addEventListener('click', () => abrirSenha());
+    $('#btn-senha-fechar').addEventListener('click', () => { $('#form-senha').reset(); $('#form-senha').hidden = true; });
     $('#btn-sair').addEventListener('click', async () => {
       if (!confirmarDescarte()) return;
       marcarSujo(false);

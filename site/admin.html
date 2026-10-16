@@ -26,6 +26,7 @@
       </a>
       <div class="adm-usuario" id="usuario" hidden>
         <span id="usuario-email"></span>
+        <button class="btn" id="btn-senha">Senha</button>
         <button class="btn" id="btn-sair">Sair</button>
       </div>
     </div>
@@ -39,24 +40,18 @@
       <section class="adm-cartao" id="tela-login" hidden>
         <p class="kicker">Área dos adms</p>
         <h1 class="adm-titulo">Entrar</h1>
-        <p class="painel-desc">Digite seu e-mail e enviaremos um link de acesso e um código. Não precisa de senha. Você continua logado neste navegador até clicar em Sair.</p>
-        <form id="form-login" class="adm-form">
-          <input type="email" id="login-email" required placeholder="seu@email.com" autocomplete="email">
-          <button class="btn btn-primario" type="submit">Enviar link</button>
+        <p class="painel-desc">Acesso só para os adms. Entre com seu e-mail e senha; você continua logado neste navegador até clicar em Sair.</p>
+        <form id="form-login" class="adm-form adm-form-coluna">
+          <input type="email" id="login-email" required placeholder="seu@email.com" autocomplete="email" aria-label="E-mail">
+          <input type="password" id="login-senha" required placeholder="Senha" autocomplete="current-password" aria-label="Senha">
+          <button class="btn btn-primario" type="submit">Entrar</button>
         </form>
+        <button class="adm-link" id="btn-link" type="button">Primeiro acesso ou esqueceu a senha? Receber código por e-mail</button>
         <p class="adm-msg" id="login-msg" role="status"></p>
         <form id="form-codigo" class="adm-form" hidden>
           <input id="login-codigo" inputmode="numeric" autocomplete="one-time-code" required placeholder="Código do e-mail" aria-label="Código do e-mail">
           <button class="btn btn-primario" type="submit">Entrar</button>
         </form>
-      </section>
-
-      <!-- SEM ACESSO -->
-      <section class="adm-cartao" id="tela-sem-acesso" hidden>
-        <p class="kicker">Conta criada</p>
-        <h1 class="adm-titulo">Sem acesso de admin</h1>
-        <p class="painel-desc">Você está logado, mas só os adms editam os dados. Peça para um adm liberar o seu e-mail.</p>
-        <a class="btn" href="./">Voltar ao site</a>
       </section>
 
       <!-- PAINEL -->
@@ -69,18 +64,27 @@
           <div class="adm-temporada">
             <label for="sel-temporada">Temporada</label>
             <select id="sel-temporada"></select>
-            <input class="so-admin" id="nova-temporada" placeholder="Nova (ex.: 2027)" size="10" aria-label="Nova temporada">
-            <button class="btn so-admin" id="btn-nova-temporada">Criar</button>
+            <input id="nova-temporada" placeholder="Nova (ex.: 2027)" size="10" aria-label="Nova temporada">
+            <button class="btn" id="btn-nova-temporada">Criar</button>
           </div>
         </header>
-        <p class="adm-leitura so-leitura">👀 Modo leitura: você vê os dados, mas só os adms editam. Para editar, peça a um adm para liberar o seu e-mail.</p>
+        <form class="adm-senha" id="form-senha" hidden>
+          <p class="adm-senha-titulo" id="senha-titulo">Criar ou trocar sua senha</p>
+          <div class="adm-form">
+            <input type="password" id="nova-senha" required minlength="8" placeholder="Nova senha (mín. 8)" autocomplete="new-password" aria-label="Nova senha">
+            <input type="password" id="nova-senha-2" required minlength="8" placeholder="Repita a senha" autocomplete="new-password" aria-label="Repita a senha">
+            <button class="btn btn-primario" type="submit">Salvar senha</button>
+            <button class="btn" type="button" id="btn-senha-fechar">Agora não</button>
+          </div>
+          <p class="adm-msg" id="senha-msg" role="status"></p>
+        </form>
 
         <div class="abas" id="abas" role="tablist">
           <button class="aba ativa" data-aba="temporada">📊 Temporada</button>
           <button class="aba" data-aba="mes">📅 Mês</button>
           <button class="aba" data-aba="honrarias">🏆 Honrarias</button>
           <button class="aba" data-aba="over">📝 Notas Over</button>
-          <button class="aba so-admin" data-aba="admins">🔑 Admins</button>
+          <button class="aba" data-aba="admins">🔑 Admins</button>
         </div>
 
         <div id="conteudo"></div>
