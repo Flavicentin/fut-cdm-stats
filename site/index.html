@@ -128,13 +128,21 @@
           </article>
           <article class="painel">
             <h3>Corrida da temporada</h3>
-            <p class="painel-desc">Acumulado mês a mês. Os 3 primeiros em destaque; passe o mouse para ver os outros.</p>
-            <div class="seg seg-pequeno" id="seg-corrida" role="group" aria-label="Métrica">
-              <button data-c="gols" class="ativo">Gols</button>
-              <button data-c="assist">Assist.</button>
-              <button data-c="ga">G+A</button>
+            <p class="painel-desc">Acumulado mês a mês. Os 3 primeiros em destaque. Procure seu nome para ver sua linha em dourado.</p>
+            <div class="corrida-ctrl">
+              <div class="seg seg-pequeno" id="seg-corrida" role="group" aria-label="Métrica">
+                <button data-c="gols" class="ativo">Gols</button>
+                <button data-c="assist">Assist.</button>
+                <button data-c="ga">G+A</button>
+              </div>
+              <div class="busca busca-corrida" id="busca-corrida">
+                <input type="search" placeholder="🔍 Ache você na corrida…" aria-label="Destacar jogador na corrida" autocomplete="off">
+                <button class="limpar" type="button" id="limpar-corrida" aria-label="Tirar destaque" hidden>×</button>
+                <ul class="sugestoes" role="listbox"></ul>
+              </div>
             </div>
-            <div class="grafico" id="g-corrida" style="height:420px"></div>
+            <div class="corrida-info" id="corrida-info" hidden></div>
+            <div class="grafico" id="g-corrida" style="height:460px"></div>
           </article>
           <article class="painel painel-largo">
             <h3>Mapa de calor da temporada</h3>

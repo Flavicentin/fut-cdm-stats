@@ -474,3 +474,21 @@ body.travado { overflow: hidden; }
 
 /* Pódios com a lista completa: rolagem própria quando passa de ~7 nomes */
 .podio ol { max-height: 330px; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; scrollbar-width: thin; }
+
+/* Corrida: busca para destacar um jogador */
+.corrida-ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
+.corrida-ctrl .seg-pequeno { margin-bottom: 0; }
+.busca-corrida { flex: 1; min-width: 180px; }
+.busca-corrida input { padding-top: 7px; padding-bottom: 7px; font-size: 14px; border-color: color-mix(in srgb, var(--ouro) 45%, transparent); }
+.busca-corrida input:focus { border-color: var(--ouro); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ouro) 18%, transparent); }
+.busca-corrida .limpar {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 8px;
+  border: 0; background: var(--surface-2); color: var(--texto-2); font-size: 18px; line-height: 1;
+}
+.busca-corrida .limpar[hidden] { display: none; }
+.corrida-info {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; padding: 8px 12px; border-radius: 12px; font-size: 13px;
+  background: color-mix(in srgb, var(--ouro) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ouro) 35%, transparent);
+}
+.corrida-info[hidden] { display: none; }
+.corrida-info .ponto { width: 10px; height: 10px; border-radius: 50%; background: var(--ouro); }

@@ -262,7 +262,7 @@ const Charts = (() => {
   }
 
   /* Corrida acumulada mês a mês: todos em cinza, top 3 coloridos com nome na ponta */
-  function opCorrida({ meses, series }) {
+  function opCorrida({ meses, series, foco }) {
     const cores = [tok('acento'), tok('s-a'), tok('s-b')];
     const top = [...series].sort((a, b) => b.valores.at(-1) - a.valores.at(-1)).slice(0, 3).map(s => s.id);
     return {
@@ -278,15 +278,16 @@ const Charts = (() => {
       xAxis: { ...eixo(''), type: 'category', boundaryGap: false, data: meses, splitLine: { show: false } },
       yAxis: { ...eixo(''), type: 'value' },
       series: series.map(s => {
-        const i = top.indexOf(s.id), destaque = i >= 0;
+        const i = top.indexOf(s.id), eFoco = s.id === foco, destaque = i >= 0 || eFoco;
+        const cor = eFoco ? tok('ouro') : i >= 0 ? cores[i] : null;
         return {
           name: s.nome, type: 'line', data: s.valores, id: s.id,
-          symbol: 'circle', symbolSize: destaque ? 7 : 4, showSymbol: destaque,
-          z: destaque ? 3 : 1,
-          lineStyle: { width: destaque ? 2.5 : 1.2, color: destaque ? cores[i] : tok('borda-forte') },
-          itemStyle: { color: destaque ? cores[i] : tok('texto-3'), borderColor: tok('surface'), borderWidth: 2 },
-          emphasis: { focus: 'series', lineStyle: { width: 3 } },
-          endLabel: destaque ? { show: true, formatter: '{a}  {c}', color: tok('texto'), fontWeight: 700, fontSize: 12 } : undefined,
+          symbol: 'circle', symbolSize: eFoco ? 9 : destaque ? 7 : 4, showSymbol: destaque,
+          z: eFoco ? 5 : destaque ? 3 : 1,
+          lineStyle: { width: eFoco ? 4 : destaque ? 2.5 : 1.2, color: cor || tok('borda-forte'), opacity: foco && !destaque ? .6 : 1 },
+          itemStyle: { color: cor || tok('texto-3'), borderColor: tok('surface'), borderWidth: 2 },
+          emphasis: { focus: 'series', lineStyle: { width: eFoco ? 4 : 3 } },
+          endLabel: destaque ? { show: true, formatter: '{a}  {c}', color: eFoco ? tok('ouro') : tok('texto'), fontWeight: eFoco ? 800 : 700, fontSize: eFoco ? 13 : 12 } : undefined,
           blur: { lineStyle: { opacity: .25 } },
           labelLayout: { moveOverlap: 'shiftY' },
         };

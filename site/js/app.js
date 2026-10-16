@@ -91,6 +91,7 @@
     grupoHonras: 's',
     mes: null,
     metricaCorrida: 'gols',
+    focoCorrida: null,
     a: null,
     b: null,
     modo: 'numeros',
@@ -332,7 +333,21 @@
       let acc = 0;
       return { id: j.id, nome: j.nome, valores: j.porMes.map(i => (acc += val(i))) };
     });
-    Charts.corrida($('#g-corrida'), { meses: state.meses.map(m => curtoMes(m.mes)), series });
+    const foco = state.focoCorrida;
+    Charts.corrida($('#g-corrida'), { meses: state.meses.map(m => curtoMes(m.mes)), series, foco });
+
+    // Resumo de quem está em destaque: total acumulado e posição na corrida
+    const info = $('#corrida-info');
+    const j = foco && state.porId[foco];
+    $('#limpar-corrida').hidden = !foco;
+    if (!j) { info.hidden = true; return; }
+    const unid = { gols: 'gols', assist: 'assistências', ga: 'G+A' }[k];
+    const rs = topPor(series.map(s => ({ ...s, j: s })), s => s.valores.at(-1));
+    const r = rs.find(x => x.j.id === foco);
+    info.hidden = false;
+    info.innerHTML = r
+      ? `<span class="ponto"></span><b>${esc(j.nome)}</b> · ${r.valor} ${unid} · <b>${r.pos}º</b> na corrida de ${unid}`
+      : `<span class="ponto"></span><b>${esc(j.nome)}</b> ainda não tem ${unid} nos meses registrados`;
   }
 
   function renderHeatMeses() {
@@ -691,6 +706,12 @@
     });
 
     autocomplete($('#busca-global'), (id, input) => { input.value = ''; input.blur(); location.hash = `jogador/${id}`; });
+    autocomplete($('#busca-corrida'), (id, input) => {
+      state.focoCorrida = id; input.value = state.porId[id].nome; input.blur(); renderCorrida();
+    });
+    $('#limpar-corrida').addEventListener('click', () => {
+      state.focoCorrida = null; $('#busca-corrida input').value = ''; renderCorrida();
+    });
     autocomplete($('.sel-a .busca'), id => definirDuelo(id, null));
     autocomplete($('.sel-b .busca'), id => definirDuelo(null, id));
     $('#btn-inverter').addEventListener('click', () => {
