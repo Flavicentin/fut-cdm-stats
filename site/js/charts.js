@@ -47,6 +47,7 @@ const Charts = (() => {
     const chart = r ? r.chart : echarts.init(el, null, { renderer: 'svg' });
     if (!r) chart.on('click', abrir);
     registro[el.id] = { chart, montar: fn };
+    if (r) chart.resize();   // a altura do container pode ter mudado (ex.: heatmap com outro nº de linhas)
     chart.setOption(fn(), true);
   }
 
