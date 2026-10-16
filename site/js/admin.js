@@ -193,11 +193,15 @@
     btn.disabled = true;
     msg.classList.remove('erro');
     msg.textContent = 'Enviando…';
-    // Só adm convidado pode ganhar conta nova pelo link; os demais só recebem se já tiverem conta
+    // O link só sai para e-mails na lista de convites da aba Admins (e cria a conta no primeiro acesso)
     const { data: convidado } = await sb.rpc('e_convidado', { p_email: email });
+    if (convidado !== true) {
+      btn.disabled = false;
+      return msgLogin('Esse e-mail não está na lista de adms. Peça para um adm te adicionar na aba Admins.', true);
+    }
     const { error } = await sb.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: convidado === true },
+      options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true },
     });
     btn.disabled = false;
     if (error) {
@@ -205,7 +209,7 @@
       msg.textContent = error.status === 429 || /rate limit|security purposes/i.test(error.message)
         ? 'Muitos pedidos em pouco tempo. Espere alguns minutos e tente de novo.'
         : /signups not allowed/i.test(error.message)
-          ? 'Esse e-mail não está cadastrado como adm. Peça para um adm te convidar na aba Admins.'
+          ? 'O cadastro de contas está desligado no Supabase (Authentication → Sign In / Providers → Allow new users to sign up).'
           : 'Não foi possível enviar: ' + error.message;
       return;
     }
