@@ -68,7 +68,7 @@
 
   function mostrar(tela) {
     $('#carregando').hidden = true;
-    for (const t of ['login', 'painel']) $(`#tela-${t}`).hidden = t !== tela;
+    for (const t of ['login', 'espera', 'painel']) $(`#tela-${t}`).hidden = t !== tela;
   }
 
   function marcarSujo(v = true) {
@@ -137,12 +137,10 @@
     $('#usuario-email').textContent = st.usuario?.email || '';
     if (!st.usuario) return mostrar('login');
     try {
-      // A área é só dos adms: quem não é adm é deslogado e usa o site público
-      if (!ok(await sb.rpc('is_admin'))) {
-        await sb.auth.signOut();
-        return msgLogin('Este acesso é só para os adms. Os números estão no site público.', true);
-      }
+      // Conta nova fica pendente até um adm aprovar na aba Admins (como um pedido de amizade)
+      if (!ok(await sb.rpc('is_admin'))) return mostrarEspera();
       await carregarBase();
+      atualizarPedidos();
       mostrar('painel');
       // Enquanto o adm não criar a própria senha (link mágico ou senha provisória), o popup é obrigatório
       if (!st.usuario.user_metadata?.senha_criada) abrirSenha(true);
@@ -153,6 +151,24 @@
       $('#login-msg').textContent = 'Erro ao carregar: ' + erroLegivel(e);
       $('#login-msg').classList.add('erro');
     }
+  }
+
+  async function mostrarEspera() {
+    const { data } = await sb.from('profiles').select('papel').eq('id', st.usuario.id).maybeSingle();
+    const recusado = data?.papel === 'recusado';
+    $('#espera-kicker').textContent = recusado ? 'Pedido recusado' : 'Pedido enviado';
+    $('#espera-titulo').textContent = recusado ? 'Sem acesso' : 'Aguardando aprovação';
+    $('#espera-desc').textContent = recusado
+      ? `Os adms não liberaram o acesso para ${st.usuario.email}. Os números continuam no site público.`
+      : `Sua conta (${st.usuario.email}) foi criada. Um adm precisa aprovar o seu acesso. Depois da aprovação, clique em “Verificar de novo”.`;
+    $('#btn-espera-verificar').hidden = recusado;
+    mostrar('espera');
+  }
+
+  // Mostra no botão da aba quantos pedidos de acesso estão esperando
+  async function atualizarPedidos() {
+    const { count } = await sb.from('profiles').select('id', { count: 'exact', head: true }).eq('papel', 'leitor');
+    $('[data-aba="admins"]').textContent = count ? `🔑 Admins · ${count} pedido${count > 1 ? 's' : ''}` : '🔑 Admins';
   }
 
   function msgLogin(texto, erro = false) {
@@ -193,12 +209,7 @@
     btn.disabled = true;
     msg.classList.remove('erro');
     msg.textContent = 'Enviando…';
-    // O link só sai para e-mails na lista de convites da aba Admins (e cria a conta no primeiro acesso)
-    const { data: convidado } = await sb.rpc('e_convidado', { p_email: email });
-    if (convidado !== true) {
-      btn.disabled = false;
-      return msgLogin('Esse e-mail não está na lista de adms. Peça para um adm te adicionar na aba Admins.', true);
-    }
+    // Qualquer um pode criar conta; ela fica pendente até um adm aprovar
     const { error } = await sb.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true },
@@ -213,7 +224,7 @@
           : 'Não foi possível enviar: ' + error.message;
       return;
     }
-    msg.textContent = `Pronto! Abra o link enviado para ${email}. Ao entrar, você vai criar sua senha. Se não aparecer, olhe o spam.`;
+    msg.textContent = `Pronto! Abra o link enviado para ${email}. No primeiro acesso, um adm precisa aprovar sua conta. Se não aparecer, olhe o spam.`;
   }
 
   let senhaObrigatoria = false;
@@ -581,25 +592,47 @@
       sb.from('profiles').select('id,email,nome,papel').order('email'),
       sb.from('convites_admin').select('email').order('email'),
     ]).then(rs => rs.map(ok));
+    const conta = p => `<span class="grow">${esc(p.nome || '')} <small style="color:var(--texto-3)">${esc(p.email || '')}</small></span>`;
+    const pedidos = perfis.filter(p => p.papel === 'leitor');
+    const admins = perfis.filter(p => p.papel === 'admin');
+    const recusados = perfis.filter(p => p.papel === 'recusado');
     $('#conteudo').innerHTML = `
-      <p class="painel-desc">Novo adm: adicione o e-mail aqui. A pessoa entra em “Primeiro acesso”, recebe o link, já nasce adm e cria a senha. Tirar da lista não remove o acesso: use “Remover admin” abaixo.</p>
-      <h2 class="adm-sub">Convites de admin</h2>
-      <form class="adm-form" id="form-convite">
-        <input type="email" id="convite-email" required placeholder="email@exemplo.com">
-        <button class="btn btn-primario" type="submit">Convidar</button>
-      </form>
-      <ul class="adm-lista" style="margin-top:12px">
-        ${convites.map(c => `<li><span class="grow">${esc(c.email)}</span><button class="btn btn-perigo" data-tirar-convite="${esc(c.email)}">Tirar</button></li>`).join('') || '<li>Nenhum convite.</li>'}
-      </ul>
-      <h2 class="adm-sub">Contas</h2>
+      <p class="painel-desc">Qualquer pessoa pode criar conta em “Primeiro acesso”. A conta só vira adm quando alguém daqui aprova.</p>
+      <h2 class="adm-sub">Pedidos de acesso${pedidos.length ? ` · ${pedidos.length}` : ''}</h2>
       <ul class="adm-lista">
-        ${perfis.map(p => `
+        ${pedidos.map(p => `
           <li>
-            <span class="grow">${esc(p.nome || '')} <small style="color:var(--texto-3)">${esc(p.email || '')}</small></span>
-            ${p.papel === 'admin' ? '<span class="adm-tag">admin</span>' : ''}
-            ${p.id === st.usuario.id ? '<small style="color:var(--texto-3)">você</small>' : `<button class="btn" data-papel="${p.papel === 'admin' ? 'leitor' : 'admin'}" data-usuario="${p.id}">${p.papel === 'admin' ? 'Remover admin' : 'Tornar admin'}</button>`}
+            ${conta(p)}
+            <button class="btn btn-primario" data-papel="admin" data-usuario="${p.id}" data-msg="${esc(p.email)} agora é adm.">Aprovar</button>
+            <button class="btn btn-perigo" data-papel="recusado" data-usuario="${p.id}" data-msg="Pedido de ${esc(p.email)} recusado.">Recusar</button>
+          </li>`).join('') || '<li>Nenhum pedido esperando.</li>'}
+      </ul>
+      <h2 class="adm-sub">Adms</h2>
+      <ul class="adm-lista">
+        ${admins.map(p => `
+          <li>
+            ${conta(p)}
+            ${p.id === st.usuario.id ? '<small style="color:var(--texto-3)">você</small>' : `<button class="btn btn-perigo" data-papel="recusado" data-usuario="${p.id}" data-msg="${esc(p.email)} não é mais adm.">Remover</button>`}
           </li>`).join('')}
-      </ul>`;
+      </ul>
+      ${recusados.length ? `
+      <details class="adm-conf">
+        <summary>Recusados (${recusados.length})</summary>
+        <ul class="adm-lista" style="margin-top:8px">
+          ${recusados.map(p => `<li>${conta(p)}<button class="btn" data-papel="admin" data-usuario="${p.id}" data-msg="${esc(p.email)} agora é adm.">Aprovar</button></li>`).join('')}
+        </ul>
+      </details>` : ''}
+      <details class="adm-conf">
+        <summary>Pré-aprovados (${convites.length}): e-mails que já entram como adm, sem pedido</summary>
+        <form class="adm-form" id="form-convite" style="margin-top:8px">
+          <input type="email" id="convite-email" required placeholder="email@exemplo.com">
+          <button class="btn btn-primario" type="submit">Adicionar</button>
+        </form>
+        <ul class="adm-lista" style="margin-top:8px">
+          ${convites.map(c => `<li><span class="grow">${esc(c.email)}</span><button class="btn btn-perigo" data-tirar-convite="${esc(c.email)}">Tirar</button></li>`).join('') || '<li>Nenhum.</li>'}
+        </ul>
+      </details>`;
+    atualizarPedidos();
   }
 
   async function acaoAdmin(fn, msg) {
@@ -620,6 +653,12 @@
     $('#btn-senha').addEventListener('click', () => abrirSenha());
     $('#btn-senha-fechar').addEventListener('click', fecharSenha);
     $('#btn-senha-sair').addEventListener('click', async () => { fecharSenha(); await sb.auth.signOut(); });
+    $('#btn-espera-verificar').addEventListener('click', async () => {
+      const { data } = await sb.auth.getSession();
+      sessaoAtual = undefined;
+      await aoMudarSessao(data.session);
+      if (!$('#tela-espera').hidden) toast('Ainda não foi aprovado.');
+    });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal-senha').hidden && !senhaObrigatoria) fecharSenha(); });
     $('#btn-sair').addEventListener('click', async () => {
       if (!confirmarDescarte()) return;
@@ -702,7 +741,7 @@
         const email = t.dataset.tirarConvite;
         acaoAdmin(async () => ok(await sb.from('convites_admin').delete().eq('email', email)), `${email} saiu dos convites.`);
       } else if (t.dataset.papel) {
-        acaoAdmin(async () => ok(await sb.rpc('definir_papel', { p_usuario: t.dataset.usuario, p_papel: t.dataset.papel })), 'Papel alterado.');
+        acaoAdmin(async () => ok(await sb.rpc('definir_papel', { p_usuario: t.dataset.usuario, p_papel: t.dataset.papel })), t.dataset.msg || 'Papel alterado.');
       }
     });
 

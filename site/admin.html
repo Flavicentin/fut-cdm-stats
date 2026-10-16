@@ -40,14 +40,25 @@
       <section class="adm-cartao" id="tela-login" hidden>
         <p class="kicker">Área dos adms</p>
         <h1 class="adm-titulo">Entrar</h1>
-        <p class="painel-desc">Acesso só para os adms. Entre com seu e-mail e senha; você continua logado neste navegador até clicar em Sair.</p>
+        <p class="painel-desc">Entre com seu e-mail e senha; você continua logado neste navegador até clicar em Sair. Ainda não é adm? Peça acesso pelo link abaixo e espere a aprovação.</p>
         <form id="form-login" class="adm-form adm-form-coluna">
           <input type="email" id="login-email" required placeholder="seu@email.com" autocomplete="email" aria-label="E-mail">
           <input type="password" id="login-senha" required placeholder="Senha" autocomplete="current-password" aria-label="Senha">
           <button class="btn btn-primario" type="submit">Entrar</button>
         </form>
-        <button class="adm-link" id="btn-link" type="button">Primeiro acesso ou esqueceu a senha? Receber link por e-mail</button>
+        <button class="adm-link" id="btn-link" type="button">Pedir acesso, primeiro acesso ou esqueceu a senha? Receber link por e-mail</button>
         <p class="adm-msg" id="login-msg" role="status"></p>
+      </section>
+
+      <!-- AGUARDANDO APROVAÇÃO -->
+      <section class="adm-cartao" id="tela-espera" hidden>
+        <p class="kicker" id="espera-kicker">Pedido enviado</p>
+        <h1 class="adm-titulo" id="espera-titulo">Aguardando aprovação</h1>
+        <p class="painel-desc" id="espera-desc"></p>
+        <div class="adm-form">
+          <button class="btn btn-primario" type="button" id="btn-espera-verificar">Verificar de novo</button>
+          <a class="btn" href="./">Ver o site</a>
+        </div>
       </section>
 
       <!-- PAINEL -->
