@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fut CDM 2026</title>
-  <meta name="description" content="Rankings, estatísticas e comparações dos jogadores do Fut CDM.">
+  <meta name="description" content="Rankings, honrarias, temporada mês a mês e comparações dos jogadores do Fut CDM.">
   <meta property="og:title" content="Fut CDM 2026 — Estatísticas">
   <meta property="og:description" content="Artilharia, assistências, médias e comparação entre jogadores.">
   <meta property="og:type" content="website">
@@ -28,6 +28,8 @@
       </a>
       <nav class="nav" aria-label="Seções">
         <a href="#rankings">Rankings</a>
+        <a href="#trofeus">Troféus</a>
+        <a href="#mes-a-mes">Mês a mês</a>
         <a href="#analises">Análises</a>
         <a href="#comparar">Comparar</a>
       </nav>
@@ -67,14 +69,79 @@
           <div class="filtro-min" id="filtro-min" hidden>
             <span>Mínimo de jogos</span>
             <div class="seg" role="group" aria-label="Mínimo de jogos">
-              <button data-min="0" class="ativo">Todos</button>
+              <button data-min="10" class="ativo">10+</button>
               <button data-min="15">15+</button>
               <button data-min="20">20+</button>
+              <button data-min="1">Todos</button>
             </div>
           </div>
         </header>
         <div class="abas" id="abas-ranking" role="tablist"></div>
+        <p class="aviso" id="nota-adms" hidden>📝 Overall dado pelos adms (planilha “Over”). Não vem dos números dos jogos.</p>
         <ol class="ranking" id="ranking"></ol>
+      </div>
+    </section>
+
+    <!-- SALA DE TROFÉUS -->
+    <section class="secao" id="trofeus">
+      <div class="wrap">
+        <header class="secao-cab">
+          <div>
+            <p class="kicker">Honrarias</p>
+            <h2>Sala de Troféus</h2>
+          </div>
+          <div class="seg" id="seg-honras" role="group" aria-label="Tipo de honraria">
+            <button data-g="s" class="ativo">Por fut</button>
+            <button data-g="m">No mês</button>
+          </div>
+        </header>
+        <div class="podios" id="podios"></div>
+        <article class="painel">
+          <h3>Quadro de honrarias</h3>
+          <p class="painel-desc">Quantas vezes cada um ganhou cada prêmio. Quanto mais escuro, mais vezes. Clique no nome para ver o perfil.</p>
+          <div class="legenda-honras" id="legenda-honras"></div>
+          <div class="grafico" id="g-honras"></div>
+        </article>
+        <details class="glossario-box">
+          <summary>O que significa cada honraria?</summary>
+          <div class="glossario" id="glossario"></div>
+        </details>
+      </div>
+    </section>
+
+    <!-- MÊS A MÊS -->
+    <section class="secao" id="mes-a-mes">
+      <div class="wrap">
+        <header class="secao-cab">
+          <div>
+            <p class="kicker">Linha do tempo</p>
+            <h2>Temporada mês a mês</h2>
+          </div>
+        </header>
+        <div class="abas" id="pilulas-mes" role="tablist"></div>
+        <div class="mes-destaques" id="mes-destaques"></div>
+        <div class="grade-graficos">
+          <article class="painel">
+            <h3 id="mes-titulo">G+A do mês</h3>
+            <p class="painel-desc">Top 12 do mês em gols + assistências.</p>
+            <ol class="ranking ranking-compacto" id="mes-ranking"></ol>
+          </article>
+          <article class="painel">
+            <h3>Corrida da temporada</h3>
+            <p class="painel-desc">Acumulado mês a mês. Os 3 primeiros em destaque; passe o mouse para ver os outros.</p>
+            <div class="seg seg-pequeno" id="seg-corrida" role="group" aria-label="Métrica">
+              <button data-c="gols" class="ativo">Gols</button>
+              <button data-c="assist">Assist.</button>
+              <button data-c="ga">G+A</button>
+            </div>
+            <div class="grafico" id="g-corrida" style="height:420px"></div>
+          </article>
+          <article class="painel painel-largo">
+            <h3>Mapa de calor da temporada</h3>
+            <p class="painel-desc">G+A de cada jogador em cada mês. Dá pra ver quem é constante e quem teve um mês fora da curva.</p>
+            <div class="grafico" id="g-heat-meses"></div>
+          </article>
+        </div>
       </div>
     </section>
 
@@ -142,6 +209,11 @@
             <label>Jogador 2</label>
             <div class="busca"><input type="search" placeholder="Escolha…" autocomplete="off"><ul class="sugestoes" role="listbox"></ul></div>
           </div>
+        </div>
+        <div class="abas modos-duelo" id="modos-duelo" role="tablist">
+          <button class="aba ativa" data-modo="numeros">⚽ Números</button>
+          <button class="aba" data-modo="honras">🏆 Honrarias</button>
+          <button class="aba aba-adms" data-modo="notas">📝 Notas dos adms</button>
         </div>
         <div id="duelo"></div>
       </div>

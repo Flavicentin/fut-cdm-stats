@@ -1,4 +1,4 @@
-/* Fut CDM — estado, rankings, perfil, comparação e rotas. */
+/* Fut CDM — estado, rankings, honrarias, mês a mês, perfil, comparação e rotas. */
 (() => {
   'use strict';
 
@@ -8,7 +8,9 @@
   const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const int = v => String(Math.round(v));
   const dec = v => v.toFixed(1).replace('.', ',');
-  const ord = n => `${n}º`;
+  const ord = n => n ? `${n}º` : '—';
+
+  const MIN_JOGOS = 10;   // mesmo critério dos adms para as médias
 
   const METRICAS = [
     { id: 'gols', rotulo: 'Gols', fmt: int, val: j => j.gols },
@@ -19,9 +21,10 @@
     { id: 'gapj', rotulo: 'G+A/jogo', fmt: dec, val: j => j.gapj, media: true },
     { id: 'partidas', rotulo: 'Partidas', fmt: int, val: j => j.partidas },
   ];
-  const MET = Object.fromEntries(METRICAS.map(m => [m.id, m]));
+  const ABA_OVERALL = { id: 'ovr', rotulo: 'Overall · adms', fmt: int, val: j => j.over?.ovr ?? 0, adms: true };
+  const MET = Object.fromEntries([...METRICAS, ABA_OVERALL].map(m => [m.id, m]));
 
-  // Atributos do radar: [sigla, nome, métrica, peso no overall]
+  // Radar calculado a partir dos números dos jogos: [sigla, nome, métrica, peso]
   const ATRIBUTOS = [
     ['FIN', 'Finalização', 'gpj', .22],
     ['PAS', 'Passe', 'apj', .22],
@@ -29,6 +32,46 @@
     ['PRE', 'Presença', 'partidas', .12],
     ['VOL', 'Volume', 'ga', .18],
   ];
+  // Notas dos adms (planilha "Over")
+  const NOTAS = [
+    ['PAC', 'Pace', 'pac'],
+    ['FIN', 'Finalização', 'fin'],
+    ['PAS', 'Passe', 'pas'],
+    ['DRI', 'Drible', 'dri'],
+    ['DEF', 'Defesa', 'def'],
+    ['FIS', 'Físico', 'fis'],
+  ];
+
+  // Honrarias: (S) num fut só · (M) no mês
+  const HONRAS = [
+    { k: 'mvp_s', g: 's', ic: '🥇', nome: 'MVP', desc: 'Melhor jogador do fut' },
+    { k: 'totw', g: 's', ic: '✅', nome: 'TOTW', desc: 'Seleção da semana (Team of the Week)' },
+    { k: 'art_s', g: 's', ic: '🥅', nome: 'Artilheiro', desc: 'Quem fez mais gols no fut' },
+    { k: 'gar_s', g: 's', ic: '🎁', nome: 'Garçom', desc: 'Quem deu mais assistências no fut' },
+    { k: 'gart_s', g: 's', ic: '🐲', nome: 'Gartilheiro', desc: 'Artilheiro e garçom ao mesmo tempo' },
+    { k: 'mc_s', g: 's', ic: '⭐', nome: 'Masterclass', desc: 'Mais de 10 participações (G+A)' },
+    { k: 'dd_s', g: 's', ic: '✌️', nome: 'Duplo-duplo', desc: 'Mais de 10 gols e mais de 10 assistências' },
+    { k: 'top3g_s', g: 's', ic: '⚽', nome: 'Top 3 G', desc: 'Entre os 3 que mais fizeram gols' },
+    { k: 'top3a_s', g: 's', ic: '👟', nome: 'Top 3 A', desc: 'Entre os 3 que mais deram assistências' },
+    { k: 'potm', g: 'm', ic: '🏆', nome: 'POTM', desc: 'Jogador do mês (Player of the Month)' },
+    { k: 'mvp_m', g: 'm', ic: '🥇', nome: 'MVP', desc: 'Melhor jogador do mês' },
+    { k: 'art_m', g: 'm', ic: '🥅', nome: 'Artilheiro', desc: 'Quem fez mais gols no mês' },
+    { k: 'gar_m', g: 'm', ic: '🎁', nome: 'Garçom', desc: 'Quem deu mais assistências no mês' },
+    { k: 'gart_m', g: 'm', ic: '🐲', nome: 'Gartilheiro', desc: 'Artilheiro e garçom do mês' },
+    { k: 'mc_m', g: 'm', ic: '⭐', nome: 'Masterclass', desc: 'Mais de 10 participações no mês' },
+    { k: 'dd_m', g: 'm', ic: '✌️', nome: 'Duplo-duplo', desc: '10+ gols e 10+ assistências no mês' },
+    { k: 'top3g_m', g: 'm', ic: '⚽', nome: 'Top 3 G', desc: 'Entre os 3 que mais fizeram gols no mês' },
+    { k: 'top3a_m', g: 'm', ic: '👟', nome: 'Top 3 A', desc: 'Entre os 3 que mais deram assistências no mês' },
+  ];
+  const HON = Object.fromEntries(HONRAS.map(h => [h.k, h]));
+  const GRUPO = { s: 'por fut', m: 'no mês' };
+  const honra = (j, k) => j.honras?.[k] || 0;
+  const totalHonras = (j, g) => HONRAS.filter(h => !g || h.g === g).reduce((t, h) => t + honra(j, h.k), 0);
+
+  const NOME_MES = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const nomeMes = m => NOME_MES[+m.slice(5, 7)];
+  const curtoMes = m => nomeMes(m).slice(0, 3);
+  const mesAtual = new Date().toISOString().slice(0, 7);
 
   const POSICOES = {
     ATA: 'Atacante · finalizador nato',
@@ -38,39 +81,53 @@
 
   const state = {
     temporada: null,
-    jogadores: [],
+    jogadores: [],     // elenco completo (inclui quem só tem nota/honraria)
+    comJogos: [],      // quem tem partidas registradas
+    regulares: [],     // quem tem o mínimo de jogos
     porId: {},
+    meses: [],
     aba: 'gols',
-    minJogos: 0,
+    minJogos: MIN_JOGOS,
+    grupoHonras: 's',
+    mes: null,
+    metricaCorrida: 'gols',
     a: null,
     b: null,
+    modo: 'numeros',
   };
 
   /* ---------------- Dados ---------------- */
   async function carregar() {
     const temporadas = await fetch('data/temporadas.json').then(r => r.json());
-    const t = temporadas[0];
-    const dados = await fetch(`data/${t}.json`).then(r => r.json());
+    const dados = await fetch(`data/${temporadas[0]}.json`).then(r => r.json());
     state.temporada = dados.temporada;
     state.atualizado = dados.atualizado_em;
     state.jogadores = dados.jogadores.map(j => {
-      const ga = j.gols + j.assist;
-      return { ...j, ga, gpj: j.gols / j.partidas, apj: j.assist / j.partidas, gapj: ga / j.partidas };
+      const ga = j.gols + j.assist, p = j.partidas || 0;
+      return { ...j, ga, gpj: p ? j.gols / p : 0, apj: p ? j.assist / p : 0, gapj: p ? ga / p : 0 };
     });
     state.porId = Object.fromEntries(state.jogadores.map(j => [j.id, j]));
+    state.comJogos = state.jogadores.filter(j => j.partidas > 0);
+    state.regulares = state.comJogos.filter(j => j.partidas >= MIN_JOGOS);
+    state.meses = dados.meses || [];
+    state.mes = state.meses.at(-1)?.mes;
+    // série mês a mês de cada jogador do elenco
+    for (const j of state.jogadores) j.porMes = state.meses.map(m => m.jogadores.find(i => i.id === j.id) || { gols: 0, assist: 0 });
     calcularRanks();
     calcularAtributos();
   }
 
   // Valor usado para empate: o que aparece na tela (médias com 1 casa).
   const chave = (m, j) => m.media ? Math.round(m.val(j) * 10) / 10 : m.val(j);
+  const elegiveis = (m, min = MIN_JOGOS) =>
+    m.adms ? state.jogadores.filter(j => j.over?.ovr) : m.media ? state.comJogos.filter(j => j.partidas >= min) : state.comJogos;
 
-  // Ranking denso, igual aos .txt: "1. Roger · 2. Felps · 3. Leo e Renato · 4. ..."
-  function ranquear(metrica, lista = state.jogadores) {
+  // Ranking denso: "1. Roger · 2. Felps · 3. Leo e Renato · 4. ..."
+  function ranquear(metrica, lista = elegiveis(MET[metrica])) {
     const m = MET[metrica];
-    const ord = [...lista].sort((x, y) => m.val(y) - m.val(x) || x.nome.localeCompare(y.nome, 'pt'));
+    const ordem = [...lista].sort((x, y) => m.val(y) - m.val(x) || x.nome.localeCompare(y.nome, 'pt'));
     let pos = 0, ultimo = null;
-    return ord.map(j => {
+    return ordem.map(j => {
       const k = chave(m, j);
       if (k !== ultimo) { pos++; ultimo = k; }
       return { j, pos, valor: m.val(j) };
@@ -79,41 +136,45 @@
 
   function calcularRanks() {
     for (const j of state.jogadores) j.ranks = {};
-    for (const m of METRICAS) for (const r of ranquear(m.id)) r.j.ranks[m.id] = r.pos;
+    for (const m of Object.values(MET)) for (const r of ranquear(m.id)) r.j.ranks[m.id] = r.pos;
   }
 
+  // Radar dos números: posição de cada um em relação aos regulares (45 a 99)
   function calcularAtributos() {
-    const js = state.jogadores, n = js.length;
+    const base = state.regulares, n = base.length;
     for (const [sigla, , met] of ATRIBUTOS) {
-      const vals = js.map(MET[met].val);
+      const vals = base.map(MET[met].val);
       const min = Math.min(...vals), max = Math.max(...vals);
-      for (const j of js) {
+      for (const j of state.comJogos) {
         const v = MET[met].val(j);
         const abaixo = vals.filter(x => x < v).length;
-        const iguais = vals.filter(x => x === v).length - 1;
-        const pct = (abaixo + iguais / 2) / (n - 1);
-        const mm = max > min ? (v - min) / (max - min) : 1;
-        j.attrs = j.attrs || {};
-        j.attrs[sigla] = Math.round(45 + 54 * (.55 * pct + .45 * mm));
+        const iguais = vals.filter(x => x === v).length;
+        const pct = Math.min(1, (abaixo + Math.max(0, iguais - 1) / 2) / (n - 1));
+        const mm = Math.min(1, Math.max(0, max > min ? (v - min) / (max - min) : 1));
+        (j.attrs ||= {})[sigla] = Math.round(45 + 54 * (.55 * pct + .45 * mm));
       }
     }
-    for (const j of js) {
-      j.ovr = Math.round(ATRIBUTOS.reduce((s, [sigla, , , p]) => s + j.attrs[sigla] * p, 0));
-      const fatia = j.gols / j.ga;
+    for (const j of state.comJogos) {
+      j.calc = Math.round(ATRIBUTOS.reduce((s, [sigla, , , p]) => s + j.attrs[sigla] * p, 0));
+      const fatia = j.ga ? j.gols / j.ga : 0;
       j.pos = fatia >= .65 ? 'ATA' : fatia <= .5 ? 'MEI' : 'SA';
     }
-    state.media = Object.fromEntries(ATRIBUTOS.map(([s]) => [s, js.reduce((t, j) => t + j.attrs[s], 0) / n]));
+    const media = (lista, f) => lista.reduce((t, j) => t + f(j), 0) / lista.length;
+    state.mediaAttrs = Object.fromEntries(ATRIBUTOS.map(([s]) => [s, media(base, j => j.attrs[s])]));
+    const comNota = state.jogadores.filter(j => j.over?.pac);
+    state.mediaNotas = Object.fromEntries(NOTAS.map(([, , k]) => [k, media(comNota, j => j.over[k])]));
   }
 
-  const lideres = metrica => ranquear(metrica).filter(r => r.pos === 1);
+  const lideresDe = (rs) => rs.filter(r => r.pos === 1 && r.valor > 0);
   const nomes = rs => rs.map(r => r.j.nome).join(' & ');
 
-  /* ---------------- Jogador no duelo ---------------- */
-  function ladoDuelo(j, lado) {
-    return `<button class="duelista ${lado}" type="button" data-jogador="${j.id}" aria-label="Ver perfil de ${esc(j.nome)}">
-      <span class="duelista-nome">${esc(j.nome)}</span>
-      <span class="duelista-info">${j.partidas} jogos · ${j.gols}G · ${j.assist}A</span>
-    </button>`;
+  // Ranking simples por valor (honrarias, meses)
+  function topPor(lista, val) {
+    const ordem = lista.map(j => ({ j, valor: val(j) })).filter(r => r.valor > 0)
+      .sort((x, y) => y.valor - x.valor || x.j.nome.localeCompare(y.j.nome, 'pt'));
+    let pos = 0, ultimo = null;
+    for (const r of ordem) { if (r.valor !== ultimo) { pos++; ultimo = r.valor; } r.pos = pos; }
+    return ordem;
   }
 
   /* ---------------- Hero ---------------- */
@@ -124,7 +185,7 @@
     const [ano, mes, dia] = state.atualizado.split('-');
     $('#atualizado').textContent = `${dia}/${mes}/${ano}`;
 
-    const js = state.jogadores;
+    const js = state.comJogos;
     const soma = k => js.reduce((t, j) => t + j[k], 0);
     const kpis = [
       [soma('gols'), 'gols marcados', int],
@@ -136,22 +197,24 @@
       `<div class="kpi"><div class="kpi-valor num" data-contar="${v}" data-fmt="${f === dec ? 'dec' : 'int'}">${f(v)}</div><div class="kpi-rotulo">${r}</div></div>`).join('');
     contarKpis();
 
-    const cards = [
-      ['🥇', 'Artilheiro', 'gols', 'gols'],
-      ['🎯', 'Garçom', 'assist', 'assistências'],
-      ['👑', 'Rei do G+A', 'ga', 'G+A'],
-      ['⚡', 'Melhor média', 'gapj', 'G+A por jogo'],
-      ['🏟️', 'Mais presente', 'partidas', 'jogos'],
-    ];
-    $('#lideres').innerHTML = cards.map(([ic, tit, met, un]) => {
-      const ls = lideres(met);
-      return `<button class="lider" type="button" data-jogador="${ls[0].j.id}">
+    const card = (ic, tit, rs, valor, un) => !rs.length ? '' : `<button class="lider" type="button" data-jogador="${rs[0].j.id}">
         <span class="lider-icone">${ic}</span>
         <span class="lider-titulo">${tit}</span>
-        <span class="lider-nome">${esc(nomes(ls))}</span>
-        <span class="lider-valor"><b class="num">${MET[met].fmt(ls[0].valor)}</b> ${un}</span>
+        <span class="lider-nome">${esc(nomes(rs))}</span>
+        <span class="lider-valor"><b class="num">${valor}</b> ${un}</span>
       </button>`;
-    }).join('');
+    const porMet = (ic, tit, met, un) => { const rs = lideresDe(ranquear(met)); return card(ic, tit, rs, rs[0] && MET[met].fmt(rs[0].valor), un); };
+    const porHonra = (ic, tit, k, un) => { const rs = topPor(state.jogadores, j => honra(j, k)).filter(r => r.pos === 1); return card(ic, tit, rs, rs[0]?.valor, un); };
+    $('#lideres').innerHTML = [
+      porMet('⚽', 'Artilheiro', 'gols', 'gols'),
+      porMet('🎯', 'Garçom', 'assist', 'assistências'),
+      porMet('👑', 'Rei do G+A', 'ga', 'G+A'),
+      porMet('⚡', 'Melhor média', 'gapj', `G+A por jogo · ${MIN_JOGOS}+ jogos`),
+      porMet('🏟️', 'Mais presente', 'partidas', 'jogos'),
+      porHonra('🥇', 'Mais MVPs', 'mvp_s', 'MVPs de fut'),
+      porHonra('✅', 'Mais TOTW', 'totw', 'seleções da semana'),
+      porHonra('🏆', 'Mais POTM', 'potm', 'jogador do mês'),
+    ].join('');
   }
 
   function contarKpis() {
@@ -171,39 +234,126 @@
 
   /* ---------------- Rankings ---------------- */
   function renderAbas() {
-    $('#abas-ranking').innerHTML = METRICAS.map(m =>
-      `<button class="aba${m.id === state.aba ? ' ativa' : ''}" role="tab" aria-selected="${m.id === state.aba}" data-aba="${m.id}">${m.rotulo}</button>`).join('');
+    $('#abas-ranking').innerHTML = [...METRICAS, ABA_OVERALL].map(m =>
+      `<button class="aba${m.id === state.aba ? ' ativa' : ''}${m.adms ? ' aba-adms' : ''}" role="tab" aria-selected="${m.id === state.aba}" data-aba="${m.id}">${m.rotulo}</button>`).join('');
+  }
+
+  function itemRanking(r, i, max, fmt, sub = '', clicavel = true) {
+    return `<li class="rank-item" data-pos="${r.pos}" ${clicavel ? `data-jogador="${r.j.id}" tabindex="0"` : ''} style="--i:${i}">
+      <span class="rank-pos">${r.pos}</span>
+      <div class="rank-corpo">
+        <div class="rank-nome">${esc(r.j.nome)}${sub ? ` <small>${sub}</small>` : ''}</div>
+        <div class="rank-barra"><span style="--w:${(r.valor / max * 100).toFixed(1)}%;--i:${i}"></span></div>
+      </div>
+      <span class="rank-valor num">${fmt(r.valor)}</span>
+    </li>`;
   }
 
   function renderRanking() {
     const m = MET[state.aba];
     $('#filtro-min').hidden = !m.media;
-    const lista = m.media ? state.jogadores.filter(j => j.partidas >= state.minJogos) : state.jogadores;
-    const rs = ranquear(m.id, lista);
+    $('#nota-adms').hidden = !m.adms;
+    const rs = ranquear(m.id, elegiveis(m, state.minJogos));
     if (!rs.length) { $('#ranking').innerHTML = '<li class="rank-vazio">Ninguém com esse mínimo de jogos.</li>'; return; }
     const max = rs[0].valor;
     $('#ranking').innerHTML = rs.map((r, i) => {
-      const sub = m.media ? `${r.j.partidas} jogos` : m.id === 'ga' ? `${r.j.gols}G · ${r.j.assist}A` : '';
-      return `<li class="rank-item" data-pos="${r.pos}" data-jogador="${r.j.id}" style="--i:${i}" tabindex="0">
-        <span class="rank-pos">${r.pos}</span>
-        <div class="rank-corpo">
-          <div class="rank-nome">${esc(r.j.nome)}${sub ? ` <small>${sub}</small>` : ''}</div>
-          <div class="rank-barra"><span style="--w:${(r.valor / max * 100).toFixed(1)}%;--i:${i}"></span></div>
-        </div>
-        <span class="rank-valor num">${m.fmt(r.valor)}</span>
-      </li>`;
+      const sub = m.media ? `${r.j.partidas} jogos${r.j.partidas < MIN_JOGOS ? ' · poucos jogos' : ''}`
+        : m.id === 'ga' ? `${r.j.gols}G · ${r.j.assist}A` : '';
+      return itemRanking(r, i, max, m.fmt, sub);
     }).join('');
+  }
+
+  /* ---------------- Sala de Troféus ---------------- */
+  function renderHonras() {
+    const g = state.grupoHonras;
+    const colunas = HONRAS.filter(h => h.g === g && state.jogadores.some(j => honra(j, h.k)));
+    const linhas = state.jogadores.filter(j => totalHonras(j, g) > 0)
+      .sort((x, y) => totalHonras(y, g) - totalHonras(x, g) || x.nome.localeCompare(y.nome, 'pt'));
+
+    const destaques = (g === 's' ? ['mvp_s', 'totw', 'gart_s'] : ['potm', 'mvp_m', 'gart_m']).map(k => {
+      const h = HON[k];
+      const rs = topPor(state.jogadores, j => honra(j, k)).filter(r => r.pos <= 3).slice(0, 5);
+      return `<article class="podio">
+        <header><span class="podio-ic">${h.ic}</span><div><b>${h.nome}</b><small>${h.desc}</small></div></header>
+        <ol>${rs.map(r => `<li data-pos="${r.pos}" data-jogador="${r.j.id}"><span class="p">${r.pos}º</span><span class="n">${esc(r.j.nome)}</span><span class="v num">${r.valor}×</span></li>`).join('') || '<li class="vazio">Ninguém ainda</li>'}</ol>
+      </article>`;
+    }).join('');
+    $('#podios').innerHTML = destaques;
+
+    Charts.heatmap($('#g-honras'), {
+      linhas: linhas.map(j => ({ id: j.id, nome: j.nome })),
+      colunas: colunas.map(h => ({ rotulo: h.ic, titulo: `${h.nome} (${GRUPO[h.g]})` })),
+      valores: linhas.map(j => colunas.map(h => honra(j, h.k))),
+      unidade: '×',
+    });
+    $('#legenda-honras').innerHTML = colunas.map(h => `<span><b>${h.ic}</b> ${h.nome}</span>`).join('');
+  }
+
+  function renderGlossario() {
+    const item = h => `<div class="glossario-item"><span class="g-ic">${h.ic}</span><div><b>${h.nome}</b><span>${h.desc}</span></div></div>`;
+    const unicos = HONRAS.filter(h => h.g === 's').concat(HON.potm);
+    $('#glossario').innerHTML = unicos.map(item).join('') +
+      `<p class="glossario-nota"><b>(S)</b> vale para um fut só · <b>(M)</b> vale para o mês inteiro. MVP, Artilheiro, Garçom, Gartilheiro, Masterclass, Duplo-duplo e Top 3 existem nas duas versões.</p>`;
+  }
+
+  /* ---------------- Temporada mês a mês ---------------- */
+  function renderMeses() {
+    if (!state.meses.length) { $('#mes-a-mes').hidden = true; return; }
+    $('#pilulas-mes').innerHTML = state.meses.map(m =>
+      `<button class="aba${m.mes === state.mes ? ' ativa' : ''}" data-mes="${m.mes}">${nomeMes(m.mes)}${m.mes === mesAtual ? ' <small>em andamento</small>' : ''}</button>`).join('');
+
+    const mes = state.meses.find(m => m.mes === state.mes);
+    const itens = mes.jogadores.map(i => ({ ...i, ga: i.gols + i.assist, j: state.porId[i.id] || { id: i.id, nome: i.nome, convidado: true } }));
+    const pessoa = i => ({ ...i.j, _i: i });
+    const top = (val) => topPor(itens.map(pessoa), p => val(p._i)).filter(r => r.pos === 1);
+    const card = (ic, tit, rs, un) => `<div class="mes-card${rs.length ? '' : ' vazio'}" ${rs[0] && !rs[0].j.convidado ? `data-jogador="${rs[0].j.id}"` : ''}>
+        <span class="lider-icone">${ic}</span><span class="lider-titulo">${tit}</span>
+        <span class="lider-nome">${rs.length ? esc(nomes(rs)) : '—'}</span>
+        <span class="lider-valor">${rs.length ? `<b class="num">${rs[0].valor}</b> ${un}` : 'ainda não definido'}</span>
+      </div>`;
+    $('#mes-destaques').innerHTML = [
+      card('🏆', 'POTM', top(i => i.honras?.potm || 0), ''),
+      card('🥇', 'MVP do mês', top(i => i.honras?.mvp_m || 0), ''),
+      card('🥅', 'Artilheiro do mês', top(i => i.gols), 'gols'),
+      card('🎁', 'Garçom do mês', top(i => i.assist), 'assistências'),
+    ].join('').replace(/<b class="num">1<\/b> <\/span>/g, '<b class="num">✓</b></span>');
+
+    const rs = topPor(itens.map(pessoa), p => p._i.ga).slice(0, 12);
+    const max = rs[0]?.valor || 1;
+    $('#mes-ranking').innerHTML = rs.map((r, i) =>
+      itemRanking(r, i, max, int, `${r.j._i.gols}G · ${r.j._i.assist}A${r.j.convidado ? ' · convidado' : ''}`, !r.j.convidado)).join('');
+    $('#mes-titulo').textContent = `G+A em ${nomeMes(state.mes)}`;
+  }
+
+  function renderCorrida() {
+    const k = state.metricaCorrida;
+    const val = i => k === 'ga' ? i.gols + i.assist : i[k];
+    const series = state.comJogos.filter(j => j.porMes.some(i => val(i) > 0)).map(j => {
+      let acc = 0;
+      return { id: j.id, nome: j.nome, valores: j.porMes.map(i => (acc += val(i))) };
+    });
+    Charts.corrida($('#g-corrida'), { meses: state.meses.map(m => curtoMes(m.mes)), series });
+  }
+
+  function renderHeatMeses() {
+    const linhas = state.comJogos.filter(j => j.porMes.some(i => i.gols + i.assist)).sort((x, y) => y.ga - x.ga);
+    Charts.heatmap($('#g-heat-meses'), {
+      linhas: linhas.map(j => ({ id: j.id, nome: j.nome })),
+      colunas: state.meses.map(m => ({ rotulo: curtoMes(m.mes), titulo: nomeMes(m.mes) })),
+      valores: linhas.map(j => j.porMes.map(i => i.gols + i.assist)),
+      unidade: ' G+A',
+    });
   }
 
   /* ---------------- Perfil ---------------- */
   function conquistas(j) {
     const b = [];
-    const top = { gols: ['🥇', 'Artilheiro'], assist: ['🎯', 'Garçom'], ga: ['👑', 'Rei do G+A'], gapj: ['⚡', 'Melhor média'], partidas: ['🏟️', 'Mais presente'], gpj: ['💥', 'Melhor média de gols'], apj: ['🧠', 'Melhor média de assist.'] };
+    const top = { gols: ['⚽', 'Artilheiro'], assist: ['🎯', 'Garçom'], ga: ['👑', 'Rei do G+A'], gapj: ['⚡', 'Melhor média'], partidas: ['🏟️', 'Mais presente'], gpj: ['💥', 'Melhor média de gols'], apj: ['🧠', 'Melhor média de assist.'] };
     for (const [met, [ic, nome]] of Object.entries(top)) if (j.ranks[met] === 1) b.push(['', `${ic} ${nome}`]);
     const top3 = METRICAS.filter(m => j.ranks[m.id] > 1 && j.ranks[m.id] <= 3).map(m => m.rotulo);
     if (top3.length) b.push(['verde', `🔝 Top 3 em ${top3.join(', ')}`]);
     if (j.assist > j.gols) b.push(['verde', '🤝 Mais assiste do que marca']);
-    if (j.gpj >= 3) b.push(['verde', '🔥 3+ gols por jogo']);
+    if (j.partidas >= MIN_JOGOS && j.gpj >= 3) b.push(['verde', '🔥 3+ gols por jogo']);
     if (j.partidas >= 25) b.push(['verde', '📅 Não perde um jogo']);
     return b;
   }
@@ -211,45 +361,82 @@
   function abrirPerfil(id) {
     const j = state.porId[id];
     if (!j) return;
-    const n = state.jogadores.length;
+    const temJogos = j.partidas > 0;
     const posicoes = METRICAS.map(m => {
       const p = j.ranks[m.id];
-      return `<li><span>${m.rotulo}</span><span class="val">${m.fmt(m.val(j))}</span><span class="pos ${p <= 3 ? 'p' + p : ''}">${ord(p)}</span></li>`;
+      return `<li><span>${m.rotulo}</span><span class="val">${temJogos ? m.fmt(m.val(j)) : '—'}</span><span class="pos ${p && p <= 3 ? 'p' + p : ''}">${ord(p)}</span></li>`;
     }).join('');
     const nums = [['gols', 'Gols'], ['assist', 'Assist.'], ['partidas', 'Jogos'], ['ga', 'G+A'], ['gpj', 'Gols/jogo'], ['gapj', 'G+A/jogo']]
       .map(([k, r]) => `<div class="perfil-num"><b class="num">${MET[k].fmt(MET[k].val(j))}</b><span>${r}</span> <em>${ord(j.ranks[k])}</em></div>`).join('');
+    const trofeus = ['s', 'm'].map(g => {
+      const hs = HONRAS.filter(h => h.g === g && honra(j, h.k));
+      return hs.length ? `<div class="estante-grupo"><h4>${g === 's' ? 'Por fut' : 'No mês'}</h4><div class="estante">${hs.map(h =>
+        `<div class="trofeu" title="${esc(h.desc)}"><span class="t-ic">${h.ic}</span><b class="num">${honra(j, h.k)}×</b><span>${h.nome}</span></div>`).join('')}</div></div>` : '';
+    }).join('');
+    const sub = !temJogos ? 'Sem jogos registrados na temporada'
+      : `${POSICOES[j.pos]} · ${j.ga ? Math.round(j.gols / j.ga * 100) : 0}% do G+A em gols${j.partidas < MIN_JOGOS ? ` · menos de ${MIN_JOGOS} jogos, fora dos rankings de média` : ''}`;
+
     $('#perfil').innerHTML = `
       <div class="perfil-cab">
         <div class="perfil-info">
-          <p class="kicker">Temporada ${state.temporada} · ${n} jogadores</p>
+          <p class="kicker">Temporada ${state.temporada}</p>
           <h2 id="perfil-nome">${esc(j.nome)}</h2>
-          <span class="perfil-tag">${POSICOES[j.pos]} · ${Math.round(j.gols / j.ga * 100)}% do G+A em gols</span>
-          <div class="perfil-nums">${nums}</div>
-          <div class="badges">${conquistas(j).map(([c, t]) => `<span class="badge ${c}">${t}</span>`).join('')}</div>
+          <span class="perfil-tag">${sub}</span>
+          ${temJogos ? `<div class="perfil-nums">${nums}</div>` : ''}
+          <div class="badges">${temJogos ? conquistas(j).map(([c, t]) => `<span class="badge ${c}">${t}</span>`).join('') : ''}</div>
           <div class="perfil-acoes">
             <a class="btn" href="#comparar/${j.id}/${(state.b && state.b !== j.id ? state.b : rival(j.id))}">⚔️ Comparar com alguém</a>
           </div>
         </div>
       </div>
       <div class="perfil-grade">
+        <article class="painel painel-largo">
+          <h3>Estante de troféus</h3>
+          ${trofeus || '<p class="painel-desc">Ainda sem honrarias nesta temporada.</p>'}
+        </article>
+        ${temJogos ? `
         <article class="painel">
-          <h3>Atributos</h3>
-          <p class="painel-desc">Comparado à média do grupo.</p>
+          <h3>Números dos jogos</h3>
+          <p class="painel-desc">Calculado só com gols, assistências e jogos, em relação aos jogadores com ${MIN_JOGOS}+ jogos.</p>
           <div class="grafico" id="g-radar-perfil" style="height:300px"></div>
         </article>
         <article class="painel">
           <h3>Posição nos rankings</h3>
           <ul class="posicoes">${posicoes}</ul>
-        </article>
+        </article>` : ''}
+        ${state.meses.length && j.porMes.some(i => i.gols + i.assist) ? `
+        <article class="painel painel-largo">
+          <h3>Mês a mês</h3>
+          <p class="painel-desc">Gols e assistências em cada mês da temporada.</p>
+          <div class="grafico" id="g-meses-perfil" style="height:240px"></div>
+        </article>` : ''}
+        ${j.over ? `
+        <article class="painel painel-largo painel-adms">
+          <div class="adms-cab">
+            <div>
+              <h3>Avaliação dos adms</h3>
+              <p class="painel-desc">Notas dadas pelos adms. Não vêm dos números dos jogos.</p>
+            </div>
+            ${j.over.ovr ? `<div class="ovr"><b class="num">${j.over.ovr}</b><span>Overall</span></div>` : ''}
+          </div>
+          <div class="grafico" id="g-notas-perfil" style="height:320px"></div>
+        </article>` : ''}
       </div>`;
     const modal = $('#modal');
     modal.hidden = false;
     document.body.classList.add('travado');
     $('.modal-caixa').scrollTop = 0;
-    Charts.radar($('#g-radar-perfil'), [
+    if (temJogos) Charts.radar($('#g-radar-perfil'), [
       { nome: j.nome, valores: ATRIBUTOS.map(([s]) => j.attrs[s]), cor: 'acento' },
-      { nome: 'Média do grupo', valores: ATRIBUTOS.map(([s]) => Math.round(state.media[s])), cor: 'neutro' },
+      { nome: 'Média do grupo', valores: ATRIBUTOS.map(([s]) => Math.round(state.mediaAttrs[s])), cor: 'neutro' },
     ], ATRIBUTOS);
+    if ($('#g-meses-perfil')) Charts.barrasMes($('#g-meses-perfil'), {
+      meses: state.meses.map(m => curtoMes(m.mes)), gols: j.porMes.map(i => i.gols), assist: j.porMes.map(i => i.assist),
+    });
+    if (j.over) Charts.radar($('#g-notas-perfil'), [
+      { nome: j.nome, valores: NOTAS.map(([, , k]) => j.over[k]), cor: 'acento' },
+      { nome: 'Média do grupo', valores: NOTAS.map(([, , k]) => Math.round(state.mediaNotas[k])), cor: 'neutro' },
+    ], NOTAS, true, { min: 70, max: 95 });
     $('.modal-fechar').focus();
   }
 
@@ -257,20 +444,45 @@
     if ($('#modal').hidden) return;
     $('#modal').hidden = true;
     document.body.classList.remove('travado');
-    Charts.descartar('g-radar-perfil');
+    ['g-radar-perfil', 'g-meses-perfil', 'g-notas-perfil'].forEach(Charts.descartar);
     if (location.hash.startsWith('#jogador/')) history.replaceState(null, '', location.pathname + location.search);
   }
 
-  const rival = id => state.jogadores.filter(j => j.id !== id).sort((x, y) => y.ovr - x.ovr)[0].id;
+  const rival = id => state.regulares.filter(j => j.id !== id).sort((x, y) => y.calc - x.calc)[0].id;
 
   /* ---------------- Comparar ---------------- */
-  function definirDuelo(a, b, atualizarUrl = true) {
+  const MODOS = { numeros: 'Números', honras: 'Honrarias', notas: 'Notas dos adms' };
+
+  function urlDuelo() {
+    return `#comparar/${state.a}/${state.b}${state.modo !== 'numeros' ? '/' + state.modo : ''}`;
+  }
+
+  function definirDuelo(a, b, atualizarUrl = true, modo) {
     if (a && state.porId[a]) state.a = a;
     if (b && state.porId[b]) state.b = b;
+    if (modo && MODOS[modo]) state.modo = modo;
     $('.sel-a input').value = state.a ? state.porId[state.a].nome : '';
     $('.sel-b input').value = state.b ? state.porId[state.b].nome : '';
-    if (atualizarUrl && state.a && state.b) history.replaceState(null, '', `#comparar/${state.a}/${state.b}`);
+    $$('#modos-duelo [data-modo]').forEach(x => x.classList.toggle('ativa', x.dataset.modo === state.modo));
+    if (atualizarUrl && state.a && state.b) history.replaceState(null, '', urlDuelo());
     renderDuelo();
+  }
+
+  // Linha de comparação: [rótulo, valorA, valorB, fmt, máximo da escala, mínimo da escala]
+  function linhasDuelo(linhas) {
+    let va = 0, vb = 0;
+    const html = linhas.map(([rot, a, b, fmt, max, min = 0]) => {
+      const ga = a > b, gb = b > a;
+      va += ga; vb += gb;
+      const w = v => Math.max(0, Math.min(100, (v - min) / ((max - min) || 1) * 100));
+      return `<div class="duelo-linha">
+        <div class="duelo-rot">${rot}</div>
+        <div class="lado a${ga ? ' vence' : ''}"><span class="v num">${fmt(a)}</span><div class="trilho"><span style="--w:${w(a)}%"></span></div></div>
+        <div class="meio"></div>
+        <div class="lado b${gb ? ' vence' : ''}"><div class="trilho"><span style="--w:${w(b)}%"></span></div><span class="v num">${fmt(b)}</span></div>
+      </div>`;
+    }).join('');
+    return { html, va, vb, total: linhas.length };
   }
 
   function renderDuelo() {
@@ -279,52 +491,104 @@
     if (!A || !B) { el.innerHTML = '<div class="duelo-vazio">Escolha dois jogadores para o mano a mano.</div>'; return; }
     if (A === B) { el.innerHTML = '<div class="duelo-vazio">Escolha dois jogadores diferentes 😄</div>'; return; }
 
-    let va = 0, vb = 0;
-    const linhas = METRICAS.map(m => {
-      const a = m.val(A), b = m.val(B), ka = chave(m, A), kb = chave(m, B);
-      const max = Math.max(...state.jogadores.map(m.val));
-      const ga = ka > kb, gb = kb > ka;
-      va += ga; vb += gb;
-      return `<div class="duelo-linha">
-        <div class="duelo-rot">${m.rotulo}</div>
-        <div class="lado a${ga ? ' vence' : ''}"><span class="v num">${m.fmt(a)}</span><div class="trilho"><span style="--w:${a / max * 100}%"></span></div></div>
-        <div class="meio"></div>
-        <div class="lado b${gb ? ' vence' : ''}"><div class="trilho"><span style="--w:${b / max * 100}%"></span></div><span class="v num">${m.fmt(b)}</span></div>
+    const legenda = `<div class="legenda-duelo">
+        <span><i style="background:var(--s-a)"></i>${esc(A.nome)}</span>
+        <span><i style="background:var(--s-b)"></i>${esc(B.nome)}</span>
       </div>`;
-    }).join('');
+    let r, corpo, aviso = '', unidade;
 
-    const total = METRICAS.length;
-    const txt = va === vb ? `<b>Empate</b> nas ${total} estatísticas`
-      : `<b>${esc((va > vb ? A : B).nome)}</b> vence em ${Math.max(va, vb)} de ${total}`;
+    if (state.modo === 'numeros') {
+      r = linhasDuelo(METRICAS.map(m => {
+        const max = Math.max(...elegiveis(m).map(m.val));
+        return [m.rotulo, chave(m, A), chave(m, B), m.fmt, max];
+      }));
+      unidade = 'estatísticas';
+      const poucos = [A, B].filter(j => j.partidas < MIN_JOGOS).map(j => j.nome);
+      if (poucos.length) aviso = `<p class="aviso">⚠️ ${esc(poucos.join(' e '))} ${poucos.length > 1 ? 'têm' : 'tem'} menos de ${MIN_JOGOS} jogos: as médias contam pouco.</p>`;
+      corpo = `
+        <article class="painel">
+          <h3>Estatística por estatística</h3>
+          <p class="painel-desc">Só números das partidas. Barras na escala do líder de cada estatística. ✓ marca quem leva.</p>
+          <div class="duelo-linhas">${r.html}</div>
+        </article>
+        <article class="painel">
+          <h3>Radar dos números</h3>
+          ${legenda}
+          <div class="grafico" id="g-radar-duelo" style="height:340px"></div>
+        </article>`;
+    } else if (state.modo === 'honras') {
+      const hs = HONRAS.filter(h => honra(A, h.k) || honra(B, h.k));
+      r = linhasDuelo(hs.map(h => [`${h.ic} ${h.nome} <small>${GRUPO[h.g]}</small>`, honra(A, h.k), honra(B, h.k), int,
+        Math.max(...state.jogadores.map(j => honra(j, h.k)))]));
+      unidade = 'honrarias';
+      corpo = `
+        <article class="painel painel-largo">
+          <h3>Honraria por honraria</h3>
+          <p class="painel-desc">Quantas vezes cada um ganhou cada prêmio na temporada. Barras na escala do recordista.</p>
+          <div class="duelo-linhas">${r.html || '<p class="painel-desc">Nenhum dos dois tem honrarias ainda.</p>'}</div>
+        </article>`;
+    } else {
+      const sem = [A, B].filter(j => !j.over?.pac).map(j => j.nome);
+      if (sem.length) {
+        el.innerHTML = `<div class="duelo-vazio">${esc(sem.join(' e '))} ainda não ${sem.length > 1 ? 'têm' : 'tem'} notas dos adms.</div>`;
+        return;
+      }
+      const linhas = NOTAS.map(([, nome, k]) => [nome, A.over[k], B.over[k], int, 95, 70]);
+      if (A.over.ovr && B.over.ovr) linhas.unshift(['Overall', A.over.ovr, B.over.ovr, int, 95, 70]);
+      r = linhasDuelo(linhas);
+      unidade = 'notas';
+      aviso = '<p class="aviso">📝 Avaliação dos adms: não vem dos números dos jogos e não entra no placar de Números.</p>';
+      corpo = `
+        <article class="painel">
+          <h3>Nota por nota</h3>
+          <p class="painel-desc">Escala de 70 a 95 para destacar as diferenças.</p>
+          <div class="duelo-linhas">${r.html}</div>
+        </article>
+        <article class="painel">
+          <h3>Radar das notas</h3>
+          ${legenda}
+          <div class="grafico" id="g-radar-duelo" style="height:340px"></div>
+        </article>`;
+    }
+
+    const txt = !r.total ? 'Sem dados para comparar'
+      : r.va === r.vb ? `<b>Empate</b> em ${MODOS[state.modo].toLowerCase()}`
+      : `<b>${esc((r.va > r.vb ? A : B).nome)}</b> vence em ${Math.max(r.va, r.vb)} de ${r.total} ${unidade}`;
 
     el.innerHTML = `
       <div class="duelo-cab">
         ${ladoDuelo(A, 'a')}
         <div class="placar">
-          <div class="placar-num"><span class="a">${va}</span><span class="x">×</span><span class="b">${vb}</span></div>
+          <div class="placar-num"><span class="a">${r.va}</span><span class="x">×</span><span class="b">${r.vb}</span></div>
           <div class="placar-txt">${txt}</div>
         </div>
         ${ladoDuelo(B, 'b')}
       </div>
-      <div class="duelo-corpo">
-        <article class="painel">
-          <h3>Estatística por estatística</h3>
-          <p class="painel-desc">Barras na escala do líder de cada estatística. ✓ marca quem leva.</p>
-          <div class="duelo-linhas">${linhas}</div>
-        </article>
-        <article class="painel">
-          <h3>Atributos</h3>
-          <div class="legenda-duelo">
-            <span><i style="background:var(--s-a)"></i>${esc(A.nome)}</span>
-            <span><i style="background:var(--s-b)"></i>${esc(B.nome)}</span>
-          </div>
-          <div class="grafico" id="g-radar-duelo" style="height:340px"></div>
-        </article>
-      </div>`;
-    Charts.radar($('#g-radar-duelo'), [
-      { nome: A.nome, valores: ATRIBUTOS.map(([s]) => A.attrs[s]), cor: 's-a' },
-      { nome: B.nome, valores: ATRIBUTOS.map(([s]) => B.attrs[s]), cor: 's-b' },
-    ], ATRIBUTOS, false);
+      ${aviso}
+      <div class="duelo-corpo">${corpo}</div>`;
+
+    if (state.modo === 'numeros') {
+      const vals = j => j.attrs ? ATRIBUTOS.map(([s]) => j.attrs[s]) : ATRIBUTOS.map(() => 45);
+      Charts.radar($('#g-radar-duelo'), [
+        { nome: A.nome, valores: vals(A), cor: 's-a' },
+        { nome: B.nome, valores: vals(B), cor: 's-b' },
+      ], ATRIBUTOS, false);
+    } else if (state.modo === 'notas') {
+      Charts.radar($('#g-radar-duelo'), [
+        { nome: A.nome, valores: NOTAS.map(([, , k]) => A.over[k]), cor: 's-a' },
+        { nome: B.nome, valores: NOTAS.map(([, , k]) => B.over[k]), cor: 's-b' },
+      ], NOTAS, false, { min: 70, max: 95 });
+    }
+  }
+
+  function ladoDuelo(j, lado) {
+    const info = state.modo === 'notas' ? (j.over?.ovr ? `Overall ${j.over.ovr}` : 'sem overall')
+      : state.modo === 'honras' ? `${totalHonras(j)} honrarias`
+      : `${j.partidas} jogos · ${j.gols}G · ${j.assist}A`;
+    return `<button class="duelista ${lado}" type="button" data-jogador="${j.id}" aria-label="Ver perfil de ${esc(j.nome)}">
+      <span class="duelista-nome">${esc(j.nome)}</span>
+      <span class="duelista-info">${info}</span>
+    </button>`;
   }
 
   /* ---------------- Busca (autocomplete) ---------------- */
@@ -335,10 +599,10 @@
       const q = norm(input.value);
       itens = state.jogadores
         .filter(j => !q || norm(j.nome).includes(q))
-        .sort((x, y) => (norm(y.nome).startsWith(q) - norm(x.nome).startsWith(q)) || y.ovr - x.ovr);
+        .sort((x, y) => (norm(y.nome).startsWith(q) - norm(x.nome).startsWith(q)) || y.ga - x.ga || x.nome.localeCompare(y.nome, 'pt'));
       sel = 0;
       ul.innerHTML = itens.length
-        ? itens.map((j, i) => `<li role="option" data-id="${j.id}" aria-selected="${i === sel}">${esc(j.nome)}<small>${j.gols}G · ${j.assist}A</small></li>`).join('')
+        ? itens.map((j, i) => `<li role="option" data-id="${j.id}" aria-selected="${i === sel}">${esc(j.nome)}<small>${j.partidas ? `${j.gols}G · ${j.assist}A` : 'sem jogos'}</small></li>`).join('')
         : '<li class="vazio">Ninguém com esse nome</li>';
       ul.classList.add('aberta');
     };
@@ -365,11 +629,11 @@
   /* ---------------- Rotas ---------------- */
   function rota() {
     const h = decodeURIComponent(location.hash.slice(1));
-    const [r, p1, p2] = h.split('/');
+    const [r, p1, p2, p3] = h.split('/');
     if (r === 'jogador') { abrirPerfil(p1); return; }
     fecharPerfil();
     if (r === 'comparar' && p1) {
-      definirDuelo(p1, p2, false);
+      definirDuelo(p1, p2, false, p3 || 'numeros');
       $('#comparar').scrollIntoView({ behavior: 'smooth' });
     }
   }
@@ -392,27 +656,25 @@
     toast.t = setTimeout(() => t.classList.remove('visivel'), 1800);
   }
 
+  // Liga um grupo de botões (segmentado/abas) a uma ação
+  function grupo(sel, attr, acao, classe = 'ativo') {
+    $(sel).addEventListener('click', e => {
+      const b = e.target.closest(`[data-${attr}]`);
+      if (!b) return;
+      $$(`${sel} [data-${attr}]`).forEach(x => x.classList.toggle(classe, x === b));
+      acao(b.dataset[attr]);
+    });
+  }
+
   /* ---------------- Eventos ---------------- */
   function ligarEventos() {
-    $('#abas-ranking').addEventListener('click', e => {
-      const b = e.target.closest('[data-aba]');
-      if (!b) return;
-      state.aba = b.dataset.aba;
-      renderAbas(); renderRanking();
-    });
-    $('#filtro-min').addEventListener('click', e => {
-      const b = e.target.closest('[data-min]');
-      if (!b) return;
-      state.minJogos = +b.dataset.min;
-      $$('#filtro-min button').forEach(x => x.classList.toggle('ativo', x === b));
-      renderRanking();
-    });
-    $('#seg-fatia').addEventListener('click', e => {
-      const b = e.target.closest('[data-m]');
-      if (!b) return;
-      $$('#seg-fatia button').forEach(x => x.classList.toggle('ativo', x === b));
-      Charts.fatia(b.dataset.m);
-    });
+    grupo('#abas-ranking', 'aba', v => { state.aba = v; renderAbas(); renderRanking(); }, 'ativa');
+    grupo('#filtro-min', 'min', v => { state.minJogos = +v; renderRanking(); });
+    grupo('#seg-fatia', 'm', v => Charts.fatia(v));
+    grupo('#seg-honras', 'g', v => { state.grupoHonras = v; renderHonras(); });
+    grupo('#pilulas-mes', 'mes', v => { state.mes = v; renderMeses(); }, 'ativa');
+    grupo('#seg-corrida', 'c', v => { state.metricaCorrida = v; renderCorrida(); });
+    grupo('#modos-duelo', 'modo', v => definirDuelo(null, null, true, v), 'ativa');
 
     // Qualquer elemento com data-jogador abre o perfil
     document.addEventListener('click', e => {
@@ -420,10 +682,8 @@
       if (el && !el.closest('#perfil')) location.hash = `jogador/${el.dataset.jogador}`;
       if (e.target.closest('[data-fechar]')) fecharPerfil();
     });
-    $('#ranking').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && e.target.dataset.jogador) location.hash = `jogador/${e.target.dataset.jogador}`;
-    });
     document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.target.dataset?.jogador && e.target.matches('li')) location.hash = `jogador/${e.target.dataset.jogador}`;
       if (e.key === 'Escape') fecharPerfil();
       if (e.key === '/' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) {
         e.preventDefault(); $('#busca-global input').focus();
@@ -438,7 +698,7 @@
       definirDuelo();
     });
     $('#btn-compartilhar').addEventListener('click', async () => {
-      const url = `${location.origin}${location.pathname}#comparar/${state.a}/${state.b}`;
+      const url = `${location.origin}${location.pathname}${urlDuelo()}`;
       try { await navigator.clipboard.writeText(url); toast('Link copiado! Manda no grupo 😎'); }
       catch { prompt('Copie o link:', url); }
     });
@@ -466,8 +726,12 @@
     renderHero();
     renderAbas();
     renderRanking();
-    Charts.iniciar(state.jogadores);
-    const top = [...state.jogadores].sort((x, y) => y.ovr - x.ovr);
+    renderHonras();
+    renderGlossario();
+    renderMeses();
+    if (state.meses.length) { renderCorrida(); renderHeatMeses(); }
+    Charts.iniciar(state.jogadores, MIN_JOGOS);
+    const top = [...state.regulares].sort((x, y) => y.calc - x.calc);
     state.a = top[0].id; state.b = top[1].id;
     definirDuelo(null, null, false);
     ligarEventos();

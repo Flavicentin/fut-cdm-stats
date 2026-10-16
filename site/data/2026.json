@@ -1,132 +1,2610 @@
 {
-  "temporada": "2026",
-  "atualizado_em": "2026-10-15",
-  "jogadores": [
+ "temporada": "2026",
+ "atualizado_em": "2026-10-15",
+ "jogadores": [
+  {
+   "id": "biel",
+   "nome": "Biel",
+   "partidas": 2,
+   "gols": 7,
+   "assist": 1,
+   "honras": {
+    "top3g_s": 1,
+    "art_s": 1
+   },
+   "over": {
+    "pac": 81,
+    "fin": 82,
+    "pas": 81,
+    "dri": 80,
+    "def": 83,
+    "fis": 82,
+    "ovr": 82
+   }
+  },
+  {
+   "id": "bona",
+   "nome": "Bona",
+   "partidas": 18,
+   "gols": 32,
+   "assist": 28,
+   "honras": {
+    "top3g_s": 1,
+    "top3a_s": 6,
+    "gar_s": 2,
+    "totw": 2
+   },
+   "over": {
+    "pac": 88,
+    "fin": 83,
+    "pas": 82,
+    "dri": 81,
+    "def": 82,
+    "fis": 80,
+    "ovr": 84
+   }
+  },
+  {
+   "id": "bruninho",
+   "nome": "Bruninho",
+   "partidas": 21,
+   "gols": 49,
+   "assist": 26,
+   "honras": {
+    "top3g_s": 2,
+    "top3a_s": 2,
+    "totw": 2
+   },
+   "over": {
+    "pac": 87,
+    "fin": 83,
+    "pas": 80,
+    "dri": 87,
+    "def": 82,
+    "fis": 82,
+    "ovr": 84
+   }
+  },
+  {
+   "id": "caetano",
+   "nome": "Caetano",
+   "partidas": 0,
+   "gols": 0,
+   "assist": 0,
+   "over": {
+    "pac": 83,
+    "fin": 85,
+    "pas": 83,
+    "dri": 88,
+    "def": 74,
+    "fis": 80,
+    "ovr": 86
+   }
+  },
+  {
+   "id": "caio",
+   "nome": "Caio",
+   "partidas": 5,
+   "gols": 6,
+   "assist": 7,
+   "honras": {
+    "top3a_s": 1
+   },
+   "over": {
+    "pac": 77,
+    "fin": 77,
+    "pas": 84,
+    "dri": 77,
+    "def": 83,
+    "fis": 84,
+    "ovr": 84
+   }
+  },
+  {
+   "id": "caio-hideki",
+   "nome": "Caio Hideki",
+   "partidas": 21,
+   "gols": 41,
+   "assist": 24,
+   "honras": {
+    "top3g_s": 3,
+    "top3a_s": 1,
+    "art_s": 1,
+    "mc_s": 1,
+    "totw": 4,
+    "top3a_m": 1,
+    "potm": 1
+   },
+   "over": {
+    "pac": 88,
+    "fin": 83,
+    "pas": 82,
+    "dri": 82,
+    "def": 78,
+    "fis": 79,
+    "ovr": 83
+   }
+  },
+  {
+   "id": "dib",
+   "nome": "Dib",
+   "partidas": 2,
+   "gols": 18,
+   "assist": 6,
+   "honras": {
+    "top3g_s": 2,
+    "top3a_s": 2,
+    "art_s": 1,
+    "gar_s": 2,
+    "mc_s": 2,
+    "mvp_s": 1,
+    "gart_s": 1,
+    "totw": 2,
+    "top3g_m": 1
+   },
+   "over": {
+    "pac": 86,
+    "fin": 86,
+    "pas": 81,
+    "dri": 93,
+    "def": 77,
+    "fis": 84,
+    "ovr": 89
+   }
+  },
+  {
+   "id": "edu",
+   "nome": "Edu",
+   "partidas": 4,
+   "gols": 14,
+   "assist": 28,
+   "honras": {
+    "top3g_s": 2,
+    "top3a_s": 3,
+    "art_s": 1,
+    "gar_s": 2,
+    "mc_s": 2,
+    "mvp_s": 3,
+    "totw": 3,
+    "top3g_m": 1,
+    "top3a_m": 1,
+    "gar_m": 1,
+    "mvp_m": 1,
+    "potm": 1
+   },
+   "over": {
+    "pac": 85,
+    "fin": 85,
+    "pas": 89,
+    "dri": 85,
+    "def": 84,
+    "fis": 85,
+    "ovr": 89
+   }
+  },
+  {
+   "id": "erick",
+   "nome": "Erick",
+   "partidas": 14,
+   "gols": 84,
+   "assist": 43,
+   "honras": {
+    "top3g_s": 12,
+    "top3a_s": 10,
+    "art_s": 6,
+    "gar_s": 2,
+    "mc_s": 5,
+    "mvp_s": 7,
+    "gart_s": 1,
+    "totw": 12,
+    "top3g_m": 4,
+    "top3a_m": 3,
+    "art_m": 3,
+    "gar_m": 1,
+    "gart_m": 1,
+    "dd_m": 2,
+    "mvp_m": 2,
+    "potm": 4
+   },
+   "over": {
+    "pac": 85,
+    "fin": 89,
+    "pas": 86,
+    "dri": 84,
+    "def": 82,
+    "fis": 85,
+    "ovr": 89
+   }
+  },
+  {
+   "id": "felps",
+   "nome": "Felps",
+   "partidas": 26,
+   "gols": 68,
+   "assist": 63,
+   "honras": {
+    "top3g_s": 4,
+    "top3a_s": 13,
+    "gar_s": 2,
+    "totw": 11,
+    "top3g_m": 2,
+    "top3a_m": 3,
+    "gar_m": 1,
+    "dd_m": 2,
+    "potm": 4
+   },
+   "over": {
+    "pac": 85,
+    "fin": 85,
+    "pas": 88,
+    "dri": 85,
+    "def": 82,
+    "fis": 84,
+    "ovr": 87
+   }
+  },
+  {
+   "id": "fernas",
+   "nome": "Fernas",
+   "partidas": 5,
+   "gols": 1,
+   "assist": 2,
+   "honras": {
+    "top3a_s": 1
+   },
+   "over": {
+    "pac": 81,
+    "fin": 78,
+    "pas": 77,
+    "dri": 76,
+    "def": 80,
+    "fis": 81,
+    "ovr": 78
+   }
+  },
+  {
+   "id": "flavio",
+   "nome": "Flavio",
+   "partidas": 18,
+   "gols": 65,
+   "assist": 29,
+   "honras": {
+    "top3g_s": 7,
+    "top3a_s": 5,
+    "art_s": 4,
+    "mc_s": 1,
+    "mvp_s": 1,
+    "totw": 8,
+    "top3g_m": 2,
+    "top3a_m": 1,
+    "art_m": 1,
+    "potm": 2
+   },
+   "over": {
+    "pac": 81,
+    "fin": 85,
+    "pas": 82,
+    "dri": 84,
+    "def": 82,
+    "fis": 81,
+    "ovr": 85
+   }
+  },
+  {
+   "id": "garcez",
+   "nome": "Garcez",
+   "partidas": 3,
+   "gols": 4,
+   "assist": 6,
+   "honras": {
+    "top3a_s": 2,
+    "gar_s": 1,
+    "totw": 1
+   },
+   "over": {
+    "pac": 76,
+    "fin": 78,
+    "pas": 81,
+    "dri": 80,
+    "def": 78,
+    "fis": 78,
+    "ovr": 81
+   }
+  },
+  {
+   "id": "giovani",
+   "nome": "Giovani",
+   "partidas": 25,
+   "gols": 73,
+   "assist": 37,
+   "honras": {
+    "top3g_s": 7,
+    "top3a_s": 4,
+    "art_s": 4,
+    "gar_s": 1,
+    "mc_s": 1,
+    "mvp_s": 1,
+    "gart_s": 1,
+    "totw": 7,
+    "top3g_m": 3,
+    "art_m": 1,
+    "potm": 2
+   },
+   "over": {
+    "pac": 91,
+    "fin": 84,
+    "pas": 80,
+    "dri": 91,
+    "def": 80,
+    "fis": 81,
+    "ovr": 87
+   }
+  },
+  {
+   "id": "joao",
+   "nome": "João",
+   "partidas": 18,
+   "gols": 56,
+   "assist": 22,
+   "honras": {
+    "top3g_s": 9,
+    "top3a_s": 2,
+    "art_s": 2,
+    "gar_s": 1,
+    "mc_s": 1,
+    "totw": 7,
+    "top3g_m": 2,
+    "potm": 2
+   },
+   "over": {
+    "pac": 83,
+    "fin": 86,
+    "pas": 79,
+    "dri": 82,
+    "def": 81,
+    "fis": 88,
+    "ovr": 86
+   }
+  },
+  {
+   "id": "kauan",
+   "nome": "Kauan",
+   "partidas": 0,
+   "gols": 0,
+   "assist": 0,
+   "honras": {
+    "top3a_s": 2
+   }
+  },
+  {
+   "id": "leo",
+   "nome": "Leo",
+   "partidas": 26,
+   "gols": 74,
+   "assist": 41,
+   "honras": {
+    "top3g_s": 6,
+    "top3a_s": 7,
+    "art_s": 2,
+    "gar_s": 2,
+    "mc_s": 1,
+    "mvp_s": 2,
+    "totw": 8,
+    "top3g_m": 1,
+    "top3a_m": 3,
+    "potm": 2
+   },
+   "over": {
+    "pac": 80,
+    "fin": 86,
+    "pas": 85,
+    "dri": 80,
+    "def": 80,
+    "fis": 85,
+    "ovr": 86
+   }
+  },
+  {
+   "id": "luccas",
+   "nome": "Luccas",
+   "partidas": 4,
+   "gols": 1,
+   "assist": 5,
+   "honras": {
+    "top3a_s": 2
+   },
+   "over": {
+    "pac": 79,
+    "fin": 77,
+    "pas": 79,
+    "dri": 77,
+    "def": 81,
+    "fis": 78,
+    "ovr": 79
+   }
+  },
+  {
+   "id": "manoel",
+   "nome": "Manoel",
+   "partidas": 8,
+   "gols": 16,
+   "assist": 19,
+   "honras": {
+    "top3g_s": 1,
+    "top3a_s": 4,
+    "art_s": 1,
+    "gar_s": 1,
+    "mc_s": 1,
+    "mvp_s": 1,
+    "totw": 4,
+    "top3a_m": 1,
+    "potm": 1
+   },
+   "over": {
+    "pac": 88,
+    "fin": 82,
+    "pas": 86,
+    "dri": 86,
+    "def": 88,
+    "fis": 88,
+    "ovr": 87
+   }
+  },
+  {
+   "id": "marson",
+   "nome": "Marson",
+   "partidas": 0,
+   "gols": 0,
+   "assist": 0,
+   "over": {
+    "pac": 83,
+    "fin": 81,
+    "pas": 81,
+    "dri": 80,
+    "def": 81,
+    "fis": 82
+   }
+  },
+  {
+   "id": "martos",
+   "nome": "Martos",
+   "partidas": 16,
+   "gols": 39,
+   "assist": 23,
+   "honras": {
+    "top3g_s": 2,
+    "top3a_s": 3,
+    "gar_s": 1,
+    "totw": 5
+   },
+   "over": {
+    "pac": 84,
+    "fin": 80,
+    "pas": 82,
+    "dri": 82,
+    "def": 83,
+    "fis": 80,
+    "ovr": 83
+   }
+  },
+  {
+   "id": "noleto",
+   "nome": "Noleto",
+   "partidas": 21,
+   "gols": 65,
+   "assist": 36,
+   "honras": {
+    "top3g_s": 6,
+    "top3a_s": 7,
+    "art_s": 1,
+    "gar_s": 3,
+    "mvp_s": 1,
+    "totw": 5,
+    "top3g_m": 1,
+    "top3a_m": 1,
+    "potm": 2
+   },
+   "over": {
+    "pac": 80,
+    "fin": 85,
+    "pas": 84,
+    "dri": 82,
+    "def": 76,
+    "fis": 84,
+    "ovr": 85
+   }
+  },
+  {
+   "id": "pedro-marques",
+   "nome": "Pedro Marques",
+   "partidas": 0,
+   "gols": 0,
+   "assist": 0,
+   "over": {
+    "pac": 81,
+    "fin": 82,
+    "pas": 83,
+    "dri": 83,
+    "def": 80,
+    "fis": 82,
+    "ovr": 83
+   }
+  },
+  {
+   "id": "pietro",
+   "nome": "Pietro",
+   "partidas": 14,
+   "gols": 48,
+   "assist": 41,
+   "honras": {
+    "top3g_s": 5,
+    "top3a_s": 7,
+    "art_s": 1,
+    "gar_s": 2,
+    "mc_s": 2,
+    "mvp_s": 3,
+    "totw": 8,
+    "top3a_m": 2,
+    "potm": 1
+   },
+   "over": {
+    "pac": 89,
+    "fin": 86,
+    "pas": 86,
+    "dri": 90,
+    "def": 80,
+    "fis": 81,
+    "ovr": 88
+   }
+  },
+  {
+   "id": "queiroz",
+   "nome": "Queiroz",
+   "partidas": 28,
+   "gols": 49,
+   "assist": 56,
+   "honras": {
+    "top3g_s": 2,
+    "top3a_s": 8,
+    "art_s": 1,
+    "gar_s": 5,
+    "mc_s": 2,
+    "mvp_s": 2,
+    "gart_s": 1,
+    "totw": 5,
+    "top3g_m": 1,
+    "top3a_m": 2,
+    "art_m": 1,
+    "potm": 2
+   },
+   "over": {
+    "pac": 83,
+    "fin": 83,
+    "pas": 86,
+    "dri": 86,
+    "def": 81,
+    "fis": 82,
+    "ovr": 86
+   }
+  },
+  {
+   "id": "renan",
+   "nome": "Renan",
+   "partidas": 4,
+   "gols": 13,
+   "assist": 12,
+   "over": {
+    "pac": 89,
+    "fin": 85,
+    "pas": 85,
+    "dri": 90,
+    "def": 80,
+    "fis": 82,
+    "ovr": 87
+   }
+  },
+  {
+   "id": "renato",
+   "nome": "Renato",
+   "partidas": 23,
+   "gols": 74,
+   "assist": 30,
+   "honras": {
+    "top3g_s": 8,
+    "top3a_s": 3,
+    "art_s": 6,
+    "totw": 9,
+    "top3g_m": 3,
+    "top3a_m": 1,
+    "art_m": 1,
+    "potm": 2
+   },
+   "over": {
+    "pac": 86,
+    "fin": 86,
+    "pas": 82,
+    "dri": 82,
+    "def": 79,
+    "fis": 86,
+    "ovr": 86
+   }
+  },
+  {
+   "id": "roger",
+   "nome": "Roger",
+   "partidas": 28,
+   "gols": 83,
+   "assist": 111,
+   "honras": {
+    "top3g_s": 9,
+    "top3a_s": 22,
+    "art_s": 3,
+    "gar_s": 12,
+    "mc_s": 6,
+    "mvp_s": 10,
+    "gart_s": 3,
+    "totw": 19,
+    "top3g_m": 5,
+    "top3a_m": 6,
+    "gar_m": 5,
+    "dd_m": 5,
+    "mvp_m": 4,
+    "potm": 6
+   },
+   "over": {
+    "pac": 85,
+    "fin": 87,
+    "pas": 89,
+    "dri": 90,
+    "def": 82,
+    "fis": 83,
+    "ovr": 90
+   }
+  },
+  {
+   "id": "rubens",
+   "nome": "Rubens",
+   "partidas": 27,
+   "gols": 20,
+   "assist": 23,
+   "honras": {
+    "top3a_s": 3
+   },
+   "over": {
+    "pac": 84,
+    "fin": 79,
+    "pas": 81,
+    "dri": 79,
+    "def": 85,
+    "fis": 87,
+    "ovr": 85
+   }
+  },
+  {
+   "id": "thiago",
+   "nome": "Thiago",
+   "partidas": 0,
+   "gols": 0,
+   "assist": 0,
+   "over": {
+    "pac": 80,
+    "fin": 79,
+    "pas": 79,
+    "dri": 78,
+    "def": 83,
+    "fis": 83
+   }
+  },
+  {
+   "id": "yuri",
+   "nome": "Yuri",
+   "partidas": 24,
+   "gols": 37,
+   "assist": 27,
+   "honras": {
+    "top3g_s": 2,
+    "top3a_s": 3,
+    "gar_s": 1,
+    "totw": 2
+   },
+   "over": {
+    "pac": 81,
+    "fin": 79,
+    "pas": 81,
+    "dri": 79,
+    "def": 83,
+    "fis": 83,
+    "ovr": 83
+   }
+  },
+  {
+   "id": "zalaf",
+   "nome": "Zalaf",
+   "partidas": 21,
+   "gols": 17,
+   "assist": 14,
+   "honras": {
+    "top3a_s": 1
+   },
+   "over": {
+    "pac": 84,
+    "fin": 77,
+    "pas": 78,
+    "dri": 79,
+    "def": 81,
+    "fis": 81,
+    "ovr": 81
+   }
+  }
+ ],
+ "meses": [
+  {
+   "mes": "2026-03",
+   "jogadores": [
     {
-      "id": "bona",
-      "nome": "Bona",
-      "partidas": 18,
-      "gols": 32,
-      "assist": 28
+     "id": "roger",
+     "gols": 9,
+     "assist": 14,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 3,
+      "gar_s": 2,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "totw": 3,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "gar_m": 1,
+      "mvp_m": 1,
+      "potm": 1
+     }
     },
     {
-      "id": "bruninho",
-      "nome": "Bruninho",
-      "partidas": 21,
-      "gols": 49,
-      "assist": 26
+     "id": "erick",
+     "gols": 16,
+     "assist": 3,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 1,
+      "art_s": 2,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "totw": 2,
+      "top3g_m": 1,
+      "art_m": 1,
+      "potm": 1
+     }
     },
     {
-      "id": "caio-hideki",
-      "nome": "Caio Hideki",
-      "partidas": 21,
-      "gols": 41,
-      "assist": 24
+     "id": "felps",
+     "gols": 9,
+     "assist": 7,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 2,
+      "totw": 2,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "potm": 1
+     }
     },
     {
-      "id": "erick",
-      "nome": "Erick",
-      "partidas": 14,
-      "gols": 84,
-      "assist": 43
+     "id": "queiroz",
+     "gols": 7,
+     "assist": 8,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "gar_s": 1,
+      "totw": 1,
+      "top3a_m": 1,
+      "potm": 1
+     }
     },
     {
-      "id": "felps",
-      "nome": "Felps",
-      "partidas": 26,
-      "gols": 68,
-      "assist": 63
+     "id": "dib",
+     "gols": 11,
+     "assist": 3,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "art_s": 1,
+      "gar_s": 1,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "gart_s": 1,
+      "totw": 1,
+      "top3g_m": 1
+     }
     },
     {
-      "id": "flavio",
-      "nome": "Flavio",
-      "partidas": 18,
-      "gols": 65,
-      "assist": 29
+     "id": "noleto",
+     "gols": 6,
+     "assist": 6,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "totw": 1
+     }
     },
     {
-      "id": "giovani",
-      "nome": "Giovani",
-      "partidas": 25,
-      "gols": 73,
-      "assist": 37
+     "id": "leo",
+     "gols": 7,
+     "assist": 4,
+     "honras": {
+      "top3a_s": 1
+     }
     },
     {
-      "id": "joao",
-      "nome": "João",
-      "partidas": 18,
-      "gols": 56,
-      "assist": 22
+     "id": "yuri",
+     "gols": 8,
+     "assist": 3,
+     "honras": {
+      "top3g_s": 1,
+      "totw": 1
+     }
     },
     {
-      "id": "leo",
-      "nome": "Leo",
-      "partidas": 26,
-      "gols": 74,
-      "assist": 41
+     "id": "bona",
+     "gols": 6,
+     "assist": 3,
+     "honras": {
+      "top3a_s": 1,
+      "totw": 1
+     }
     },
     {
-      "id": "martos",
-      "nome": "Martos",
-      "partidas": 16,
-      "gols": 39,
-      "assist": 23
+     "id": "giovani",
+     "gols": 7,
+     "assist": 1,
+     "honras": {
+      "top3g_s": 1,
+      "totw": 1
+     }
     },
     {
-      "id": "noleto",
-      "nome": "Noleto",
-      "partidas": 21,
-      "gols": 65,
-      "assist": 36
+     "id": "leria",
+     "gols": 4,
+     "assist": 4,
+     "nome": "Leria",
+     "convidado": true,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "gar_s": 1
+     }
     },
     {
-      "id": "pietro",
-      "nome": "Pietro",
-      "partidas": 14,
-      "gols": 48,
-      "assist": 41
+     "id": "rubens",
+     "gols": 3,
+     "assist": 5,
+     "honras": {
+      "top3a_s": 2
+     }
     },
     {
-      "id": "queiroz",
-      "nome": "Queiroz",
-      "partidas": 28,
-      "gols": 49,
-      "assist": 56
+     "id": "flavio",
+     "gols": 5,
+     "assist": 3,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1
+     }
     },
     {
-      "id": "renato",
-      "nome": "Renato",
-      "partidas": 23,
-      "gols": 74,
-      "assist": 30
+     "id": "fabricio",
+     "gols": 5,
+     "assist": 2,
+     "nome": "Fabricio",
+     "convidado": true
     },
     {
-      "id": "roger",
-      "nome": "Roger",
-      "partidas": 28,
-      "gols": 83,
-      "assist": 111
+     "id": "caio",
+     "gols": 3,
+     "assist": 3,
+     "honras": {
+      "top3a_s": 1
+     }
     },
     {
-      "id": "rubens",
-      "nome": "Rubens",
-      "partidas": 27,
-      "gols": 20,
-      "assist": 23
+     "id": "pedro-dantas",
+     "gols": 3,
+     "assist": 2,
+     "nome": "Pedro Dantas",
+     "convidado": true
     },
     {
-      "id": "yuri",
-      "nome": "Yuri",
-      "partidas": 24,
-      "gols": 37,
-      "assist": 27
+     "id": "bruninho",
+     "gols": 3,
+     "assist": 1
     },
     {
-      "id": "zalaf",
-      "nome": "Zalaf",
-      "partidas": 21,
-      "gols": 17,
-      "assist": 14
+     "id": "rafa",
+     "gols": 0,
+     "assist": 4,
+     "nome": "Rafa",
+     "convidado": true
+    },
+    {
+     "id": "pietro",
+     "gols": 2,
+     "assist": 2
+    },
+    {
+     "id": "caio-hideki",
+     "gols": 2,
+     "assist": 1
+    },
+    {
+     "id": "luccas",
+     "gols": 1,
+     "assist": 2,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "miguelito",
+     "gols": 2,
+     "assist": 0,
+     "nome": "Miguelito",
+     "convidado": true
+    },
+    {
+     "id": "ze",
+     "gols": 2,
+     "assist": 0,
+     "nome": "Zé",
+     "convidado": true
+    },
+    {
+     "id": "wesley",
+     "gols": 0,
+     "assist": 1,
+     "nome": "Wesley",
+     "convidado": true
+    },
+    {
+     "id": "kauan",
+     "gols": 0,
+     "assist": 1
+    },
+    {
+     "id": "garcez",
+     "gols": 0,
+     "assist": 1
+    },
+    {
+     "id": "zalaf",
+     "gols": 0,
+     "assist": 1
     }
-  ]
+   ]
+  },
+  {
+   "mes": "2026-04",
+   "jogadores": [
+    {
+     "id": "edu",
+     "gols": 13,
+     "assist": 25,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 2,
+      "art_s": 1,
+      "gar_s": 2,
+      "mc_s": 2,
+      "mvp_s": 3,
+      "totw": 3,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "gar_m": 1,
+      "dd_m": 1,
+      "mvp_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "roger",
+     "gols": 8,
+     "assist": 14,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 3,
+      "mvp_s": 1,
+      "totw": 2,
+      "top3a_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "erick",
+     "gols": 12,
+     "assist": 10,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 2,
+      "totw": 3,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "dd_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "giovani",
+     "gols": 14,
+     "assist": 7,
+     "honras": {
+      "top3g_s": 3,
+      "art_s": 1,
+      "totw": 2,
+      "top3g_m": 1,
+      "art_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "queiroz",
+     "gols": 10,
+     "assist": 9,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "art_s": 1,
+      "gar_s": 1,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "totw": 2
+     }
+    },
+    {
+     "id": "leo",
+     "gols": 12,
+     "assist": 3,
+     "honras": {
+      "top3g_s": 2,
+      "art_s": 1,
+      "mvp_s": 1,
+      "totw": 1,
+      "top3g_m": 1
+     }
+    },
+    {
+     "id": "pietro",
+     "gols": 7,
+     "assist": 8,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "yuri",
+     "gols": 8,
+     "assist": 4,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "renato",
+     "gols": 9,
+     "assist": 3,
+     "honras": {
+      "top3g_s": 1,
+      "art_s": 1
+     }
+    },
+    {
+     "id": "bona",
+     "gols": 5,
+     "assist": 6,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "felps",
+     "gols": 4,
+     "assist": 7,
+     "honras": {
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "noleto",
+     "gols": 6,
+     "assist": 3
+    },
+    {
+     "id": "bruninho",
+     "gols": 5,
+     "assist": 3,
+     "honras": {
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "rubens",
+     "gols": 4,
+     "assist": 2
+    },
+    {
+     "id": "lucas-dantas",
+     "gols": 5,
+     "assist": 1,
+     "nome": "Lucas Dantas",
+     "convidado": true
+    },
+    {
+     "id": "kauan",
+     "gols": 1,
+     "assist": 5,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "pedro-dantas",
+     "gols": 5,
+     "assist": 1,
+     "nome": "Pedro Dantas",
+     "convidado": true,
+     "honras": {
+      "top3g_s": 1,
+      "art_s": 1
+     }
+    },
+    {
+     "id": "zalaf",
+     "gols": 4,
+     "assist": 2
+    },
+    {
+     "id": "flavio",
+     "gols": 4,
+     "assist": 2
+    },
+    {
+     "id": "gustavo-leal",
+     "gols": 1,
+     "assist": 5,
+     "nome": "Gustavo Leal",
+     "convidado": true,
+     "honras": {
+      "top3a_s": 1,
+      "gar_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "rafa",
+     "gols": 3,
+     "assist": 2,
+     "nome": "Rafa",
+     "convidado": true
+    },
+    {
+     "id": "m-japones",
+     "gols": 4,
+     "assist": 0,
+     "nome": "M. Japones",
+     "convidado": true,
+     "honras": {
+      "top3g_s": 1
+     }
+    },
+    {
+     "id": "martos",
+     "gols": 3,
+     "assist": 1
+    },
+    {
+     "id": "joao",
+     "gols": 3,
+     "assist": 0,
+     "honras": {
+      "top3g_s": 1
+     }
+    },
+    {
+     "id": "garcez",
+     "gols": 3,
+     "assist": 2,
+     "honras": {
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "caio",
+     "gols": 1,
+     "assist": 2
+    },
+    {
+     "id": "caio-hideki",
+     "gols": 2,
+     "assist": 0
+    },
+    {
+     "id": "casa-grande",
+     "gols": 1,
+     "assist": 0,
+     "nome": "Casa Grande",
+     "convidado": true
+    },
+    {
+     "id": "wesley",
+     "gols": 1,
+     "assist": 0,
+     "nome": "Wesley",
+     "convidado": true
+    }
+   ]
+  },
+  {
+   "mes": "2026-05",
+   "jogadores": [
+    {
+     "id": "erick",
+     "gols": 27,
+     "assist": 16,
+     "honras": {
+      "top3g_s": 3,
+      "top3a_s": 3,
+      "art_s": 2,
+      "gar_s": 2,
+      "mc_s": 3,
+      "mvp_s": 2,
+      "gart_s": 1,
+      "totw": 3,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "art_m": 1,
+      "dd_m": 1,
+      "mvp_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "roger",
+     "gols": 15,
+     "assist": 27,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 4,
+      "gar_s": 4,
+      "mc_s": 2,
+      "mvp_s": 2,
+      "totw": 4,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "gar_m": 1,
+      "dd_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "renato",
+     "gols": 14,
+     "assist": 5,
+     "honras": {
+      "top3g_s": 2,
+      "art_s": 1,
+      "totw": 2,
+      "top3g_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "noleto",
+     "gols": 13,
+     "assist": 6,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 1,
+      "gar_s": 1,
+      "totw": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "leo",
+     "gols": 12,
+     "assist": 7,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "art_s": 1,
+      "mc_s": 1,
+      "totw": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "felps",
+     "gols": 11,
+     "assist": 11,
+     "honras": {
+      "top3a_s": 2,
+      "gar_s": 1,
+      "totw": 2,
+      "top3a_m": 1,
+      "dd_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "martos",
+     "gols": 11,
+     "assist": 4,
+     "honras": {
+      "totw": 1
+     }
+    },
+    {
+     "id": "dib",
+     "gols": 11,
+     "assist": 3,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "gar_s": 1,
+      "mc_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "giovani",
+     "gols": 10,
+     "assist": 7,
+     "honras": {
+      "totw": 1
+     }
+    },
+    {
+     "id": "joao",
+     "gols": 8,
+     "assist": 4,
+     "honras": {
+      "top3g_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "pietro",
+     "gols": 7,
+     "assist": 3,
+     "honras": {
+      "top3g_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "yuri",
+     "gols": 6,
+     "assist": 5
+    },
+    {
+     "id": "bruninho",
+     "gols": 6,
+     "assist": 2
+    },
+    {
+     "id": "queiroz",
+     "gols": 4,
+     "assist": 10,
+     "honras": {
+      "top3a_s": 1,
+      "gar_s": 1
+     }
+    },
+    {
+     "id": "bona",
+     "gols": 3,
+     "assist": 5,
+     "honras": {
+      "top3a_s": 1,
+      "gar_s": 1
+     }
+    },
+    {
+     "id": "rubens",
+     "gols": 3,
+     "assist": 4
+    },
+    {
+     "id": "flavio",
+     "gols": 3,
+     "assist": 1
+    },
+    {
+     "id": "caio-hideki",
+     "gols": 3,
+     "assist": 0
+    },
+    {
+     "id": "kauan",
+     "gols": 2,
+     "assist": 2
+    },
+    {
+     "id": "nicolas-rafa",
+     "gols": 2,
+     "assist": 2,
+     "nome": "Nicolas (Rafa)",
+     "convidado": true
+    },
+    {
+     "id": "garcez",
+     "gols": 1,
+     "assist": 3,
+     "honras": {
+      "top3a_s": 1,
+      "gar_s": 1
+     }
+    },
+    {
+     "id": "edu",
+     "gols": 1,
+     "assist": 3,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "rafa",
+     "gols": 1,
+     "assist": 2,
+     "nome": "Rafa",
+     "convidado": true
+    },
+    {
+     "id": "zalaf",
+     "gols": 1,
+     "assist": 0
+    }
+   ]
+  },
+  {
+   "mes": "2026-06",
+   "jogadores": [
+    {
+     "id": "roger",
+     "gols": 15,
+     "assist": 19,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 4,
+      "gar_s": 3,
+      "mc_s": 1,
+      "mvp_s": 3,
+      "totw": 4,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "gar_m": 1,
+      "dd_m": 1,
+      "mvp_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "flavio",
+     "gols": 18,
+     "assist": 8,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 2,
+      "art_s": 2,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "totw": 3,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "art_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "caio-hideki",
+     "gols": 11,
+     "assist": 8,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "mc_s": 1,
+      "totw": 2,
+      "top3a_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "leo",
+     "gols": 8,
+     "assist": 8,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 2,
+      "totw": 2,
+      "top3a_m": 1
+     }
+    },
+    {
+     "id": "pietro",
+     "gols": 4,
+     "assist": 8,
+     "honras": {
+      "top3a_s": 2,
+      "totw": 1,
+      "top3a_m": 1
+     }
+    },
+    {
+     "id": "bruninho",
+     "gols": 7,
+     "assist": 7,
+     "honras": {
+      "top3g_s": 1
+     }
+    },
+    {
+     "id": "martos",
+     "gols": 4,
+     "assist": 7,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "felps",
+     "gols": 11,
+     "assist": 6,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "noleto",
+     "gols": 15,
+     "assist": 5,
+     "honras": {
+      "top3g_s": 3,
+      "top3a_s": 1,
+      "art_s": 1,
+      "gar_s": 1,
+      "mvp_s": 1,
+      "totw": 2,
+      "top3g_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "renato",
+     "gols": 10,
+     "assist": 5,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "art_s": 1,
+      "totw": 2
+     }
+    },
+    {
+     "id": "queiroz",
+     "gols": 0,
+     "assist": 5,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "joao",
+     "gols": 15,
+     "assist": 4,
+     "honras": {
+      "top3g_s": 2,
+      "mc_s": 1,
+      "totw": 1,
+      "top3g_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "erick",
+     "gols": 10,
+     "assist": 4,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 1,
+      "art_s": 1,
+      "mvp_s": 1,
+      "totw": 2
+     }
+    },
+    {
+     "id": "bona",
+     "gols": 5,
+     "assist": 4,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 2
+     }
+    },
+    {
+     "id": "zalaf",
+     "gols": 4,
+     "assist": 3,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "manoel",
+     "gols": 1,
+     "assist": 3,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "giovani",
+     "gols": 9,
+     "assist": 2
+    },
+    {
+     "id": "kauan",
+     "gols": 2,
+     "assist": 2
+    },
+    {
+     "id": "rafa",
+     "gols": 0,
+     "assist": 2,
+     "nome": "Rafa",
+     "convidado": true
+    },
+    {
+     "id": "yuri",
+     "gols": 3,
+     "assist": 1
+    },
+    {
+     "id": "caio",
+     "gols": 1,
+     "assist": 1
+    },
+    {
+     "id": "thiago",
+     "gols": 1,
+     "assist": 1
+    },
+    {
+     "id": "rubens",
+     "gols": 4,
+     "assist": 0
+    }
+   ]
+  },
+  {
+   "mes": "2026-07",
+   "jogadores": [
+    {
+     "id": "erick",
+     "gols": 17,
+     "assist": 9,
+     "honras": {
+      "top3g_s": 3,
+      "top3a_s": 3,
+      "art_s": 1,
+      "mc_s": 1,
+      "mvp_s": 3,
+      "totw": 2,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "art_m": 1,
+      "gar_m": 1,
+      "gart_m": 1,
+      "mvp_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "flavio",
+     "gols": 13,
+     "assist": 7,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 1,
+      "art_s": 1,
+      "totw": 2,
+      "top3g_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "giovani",
+     "gols": 12,
+     "assist": 7,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "art_s": 1,
+      "gar_s": 1,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "gart_s": 1,
+      "totw": 1,
+      "top3g_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "felps",
+     "gols": 9,
+     "assist": 9,
+     "honras": {
+      "top3a_s": 2,
+      "gar_s": 1,
+      "totw": 1,
+      "top3a_m": 1,
+      "gar_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "renato",
+     "gols": 9,
+     "assist": 8,
+     "honras": {
+      "top3a_s": 1,
+      "totw": 1,
+      "top3a_m": 1
+     }
+    },
+    {
+     "id": "leo",
+     "gols": 12,
+     "assist": 4,
+     "honras": {
+      "top3g_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "noleto",
+     "gols": 9,
+     "assist": 6,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 2
+     }
+    },
+    {
+     "id": "martos",
+     "gols": 10,
+     "assist": 5,
+     "honras": {
+      "top3g_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "joao",
+     "gols": 8,
+     "assist": 6,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "gar_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "pietro",
+     "gols": 8,
+     "assist": 6,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "gar_s": 1,
+      "mc_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "roger",
+     "gols": 6,
+     "assist": 6,
+     "honras": {
+      "top3a_s": 2,
+      "totw": 2
+     }
+    },
+    {
+     "id": "queiroz",
+     "gols": 6,
+     "assist": 6,
+     "honras": {
+      "top3a_s": 1,
+      "gar_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "yuri",
+     "gols": 5,
+     "assist": 5,
+     "honras": {
+      "top3a_s": 1,
+      "gar_s": 1
+     }
+    },
+    {
+     "id": "caio-hideki",
+     "gols": 3,
+     "assist": 6
+    },
+    {
+     "id": "manoel",
+     "gols": 3,
+     "assist": 4,
+     "honras": {
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "zalaf",
+     "gols": 3,
+     "assist": 3
+    },
+    {
+     "id": "biel",
+     "gols": 5,
+     "assist": 1,
+     "honras": {
+      "top3g_s": 1,
+      "art_s": 1
+     }
+    },
+    {
+     "id": "bruninho",
+     "gols": 2,
+     "assist": 3
+    },
+    {
+     "id": "rubens",
+     "gols": 1,
+     "assist": 2
+    },
+    {
+     "id": "nickolas",
+     "gols": 0,
+     "assist": 2,
+     "nome": "Nickolas",
+     "convidado": true
+    },
+    {
+     "id": "rafa",
+     "gols": 1,
+     "assist": 1,
+     "nome": "Rafa",
+     "convidado": true
+    },
+    {
+     "id": "lucas-menezes",
+     "gols": 1,
+     "assist": 1,
+     "nome": "Lucas Menezes",
+     "convidado": true
+    },
+    {
+     "id": "luccas",
+     "gols": 0,
+     "assist": 1
+    },
+    {
+     "id": "hoffman",
+     "gols": 0,
+     "assist": 1,
+     "nome": "Hoffman",
+     "convidado": true
+    },
+    {
+     "id": "juan",
+     "gols": 0,
+     "assist": 1,
+     "nome": "Juan",
+     "convidado": true
+    },
+    {
+     "id": "bona",
+     "gols": 1,
+     "assist": 0
+    },
+    {
+     "id": "fernas",
+     "gols": 1,
+     "assist": 0
+    }
+   ]
+  },
+  {
+   "mes": "2026-08",
+   "jogadores": [
+    {
+     "id": "roger",
+     "gols": 13,
+     "assist": 15,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 3,
+      "art_s": 1,
+      "gar_s": 1,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "gart_s": 1,
+      "totw": 2,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "gar_m": 1,
+      "dd_m": 1,
+      "mvp_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "felps",
+     "gols": 13,
+     "assist": 11,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 4,
+      "totw": 3,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "dd_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "renato",
+     "gols": 18,
+     "assist": 4,
+     "honras": {
+      "top3g_s": 3,
+      "top3a_s": 1,
+      "art_s": 3,
+      "totw": 3,
+      "top3g_m": 1,
+      "art_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "manoel",
+     "gols": 9,
+     "assist": 9,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "art_s": 1,
+      "gar_s": 1,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "totw": 2,
+      "top3a_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "pietro",
+     "gols": 9,
+     "assist": 9,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 2,
+      "art_s": 1,
+      "gar_s": 1,
+      "mvp_s": 2,
+      "totw": 3,
+      "top3a_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "bruninho",
+     "gols": 11,
+     "assist": 6,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "giovani",
+     "gols": 8,
+     "assist": 8,
+     "honras": {
+      "top3a_s": 2,
+      "totw": 1
+     }
+    },
+    {
+     "id": "queiroz",
+     "gols": 6,
+     "assist": 9,
+     "honras": {
+      "top3a_s": 2,
+      "top3a_m": 1
+     }
+    },
+    {
+     "id": "leo",
+     "gols": 9,
+     "assist": 6,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "gar_s": 1,
+      "mvp_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "martos",
+     "gols": 8,
+     "assist": 6,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 2,
+      "gar_s": 1,
+      "totw": 3
+     }
+    },
+    {
+     "id": "flavio",
+     "gols": 10,
+     "assist": 3,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "art_s": 1,
+      "totw": 2
+     }
+    },
+    {
+     "id": "caio-hideki",
+     "gols": 9,
+     "assist": 3,
+     "honras": {
+      "top3g_s": 1,
+      "art_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "joao",
+     "gols": 10,
+     "assist": 2,
+     "honras": {
+      "top3g_s": 2,
+      "art_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "noleto",
+     "gols": 6,
+     "assist": 1
+    },
+    {
+     "id": "zalaf",
+     "gols": 3,
+     "assist": 3
+    },
+    {
+     "id": "bona",
+     "gols": 3,
+     "assist": 2
+    },
+    {
+     "id": "rubens",
+     "gols": 3,
+     "assist": 2
+    },
+    {
+     "id": "rafa",
+     "gols": 1,
+     "assist": 2,
+     "nome": "Rafa",
+     "convidado": true
+    },
+    {
+     "id": "erick",
+     "gols": 2,
+     "assist": 1
+    },
+    {
+     "id": "fernas",
+     "gols": 0,
+     "assist": 2,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "luccas",
+     "gols": 0,
+     "assist": 2,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "yuri",
+     "gols": 0,
+     "assist": 2
+    },
+    {
+     "id": "caio",
+     "gols": 1,
+     "assist": 1
+    },
+    {
+     "id": "biel",
+     "gols": 2,
+     "assist": 0
+    },
+    {
+     "id": "kauan",
+     "gols": 1,
+     "assist": 0
+    },
+    {
+     "id": "rafa-sant",
+     "gols": 1,
+     "assist": 0,
+     "nome": "Rafa Sant",
+     "convidado": true
+    }
+   ]
+  },
+  {
+   "mes": "2026-09",
+   "jogadores": [
+    {
+     "id": "roger",
+     "gols": 11,
+     "assist": 12,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 3,
+      "art_s": 2,
+      "gar_s": 2,
+      "mc_s": 1,
+      "mvp_s": 2,
+      "gart_s": 2,
+      "totw": 2,
+      "top3g_m": 1,
+      "top3a_m": 1,
+      "gar_m": 1,
+      "dd_m": 1,
+      "mvp_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "queiroz",
+     "gols": 13,
+     "assist": 6,
+     "honras": {
+      "top3a_s": 1,
+      "gar_s": 1,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "gart_s": 1,
+      "totw": 1,
+      "top3g_m": 1,
+      "art_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "joao",
+     "gols": 12,
+     "assist": 5,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 1,
+      "art_s": 1,
+      "totw": 3,
+      "top3g_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "leo",
+     "gols": 8,
+     "assist": 8,
+     "honras": {
+      "top3a_s": 2,
+      "gar_s": 1,
+      "totw": 2,
+      "top3a_m": 1,
+      "potm": 1
+     }
+    },
+    {
+     "id": "giovani",
+     "gols": 11,
+     "assist": 4,
+     "honras": {
+      "top3g_s": 2,
+      "top3a_s": 1,
+      "art_s": 2,
+      "totw": 2,
+      "top3g_m": 1
+     }
+    },
+    {
+     "id": "renato",
+     "gols": 11,
+     "assist": 4,
+     "honras": {
+      "top3g_s": 1,
+      "totw": 1,
+      "top3g_m": 1
+     }
+    },
+    {
+     "id": "noleto",
+     "gols": 7,
+     "assist": 7,
+     "honras": {
+      "top3a_s": 2,
+      "gar_s": 1,
+      "totw": 1,
+      "top3a_m": 1
+     }
+    },
+    {
+     "id": "caio-hideki",
+     "gols": 9,
+     "assist": 5,
+     "honras": {
+      "top3g_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "yuri",
+     "gols": 6,
+     "assist": 5,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "bruninho",
+     "gols": 9,
+     "assist": 2
+    },
+    {
+     "id": "flavio",
+     "gols": 8,
+     "assist": 2,
+     "honras": {
+      "top3g_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "caetano",
+     "gols": 8,
+     "assist": 2,
+     "honras": {
+      "top3g_s": 1,
+      "art_s": 1,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "pietro",
+     "gols": 5,
+     "assist": 4,
+     "honras": {
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "felps",
+     "gols": 5,
+     "assist": 3,
+     "honras": {
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "renan",
+     "gols": 5,
+     "assist": 2
+    },
+    {
+     "id": "rafa",
+     "gols": 0,
+     "assist": 6,
+     "nome": "Rafa",
+     "convidado": true,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "rubens",
+     "gols": 1,
+     "assist": 5,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "manoel",
+     "gols": 3,
+     "assist": 3,
+     "honras": {
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "bona",
+     "gols": 2,
+     "assist": 3,
+     "honras": {
+      "top3a_s": 1,
+      "gar_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "marson",
+     "gols": 3,
+     "assist": 2
+    },
+    {
+     "id": "zalaf",
+     "gols": 1,
+     "assist": 2
+    },
+    {
+     "id": "martos",
+     "gols": 3,
+     "assist": 0
+    },
+    {
+     "id": "kauan",
+     "gols": 0,
+     "assist": 2
+    },
+    {
+     "id": "caio",
+     "gols": 0,
+     "assist": 2
+    },
+    {
+     "id": "danilo",
+     "gols": 2,
+     "assist": 0,
+     "nome": "Danilo",
+     "convidado": true
+    },
+    {
+     "id": "nickolas",
+     "gols": 0,
+     "assist": 1,
+     "nome": "Nickolas",
+     "convidado": true
+    },
+    {
+     "id": "carlos",
+     "gols": 1,
+     "assist": 0,
+     "nome": "Carlos",
+     "convidado": true
+    },
+    {
+     "id": "fernas",
+     "gols": 1,
+     "assist": 0
+    }
+   ]
+  },
+  {
+   "mes": "2026-10",
+   "jogadores": [
+    {
+     "id": "renan",
+     "gols": 8,
+     "assist": 10,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 2,
+      "gar_s": 1,
+      "totw": 2
+     }
+    },
+    {
+     "id": "felps",
+     "gols": 6,
+     "assist": 9,
+     "honras": {
+      "top3a_s": 1,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "bona",
+     "gols": 7,
+     "assist": 5,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "art_s": 1,
+      "gar_s": 1,
+      "mc_s": 1,
+      "mvp_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "roger",
+     "gols": 6,
+     "assist": 4,
+     "honras": {
+      "top3g_s": 1,
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "pedro-marques",
+     "gols": 3,
+     "assist": 5,
+     "honras": {
+      "top3a_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "bruninho",
+     "gols": 6,
+     "assist": 2,
+     "honras": {
+      "top3g_s": 1
+     }
+    },
+    {
+     "id": "leo",
+     "gols": 6,
+     "assist": 1,
+     "honras": {
+      "top3g_s": 1
+     }
+    },
+    {
+     "id": "pietro",
+     "gols": 6,
+     "assist": 1,
+     "honras": {
+      "top3g_s": 1,
+      "art_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "flavio",
+     "gols": 4,
+     "assist": 2,
+     "honras": {
+      "top3g_s": 1,
+      "totw": 1
+     }
+    },
+    {
+     "id": "noleto",
+     "gols": 3,
+     "assist": 2
+    },
+    {
+     "id": "queiroz",
+     "gols": 3,
+     "assist": 1
+    },
+    {
+     "id": "caio-hideki",
+     "gols": 2,
+     "assist": 2
+    },
+    {
+     "id": "renato",
+     "gols": 3,
+     "assist": 1
+    },
+    {
+     "id": "giovani",
+     "gols": 2,
+     "assist": 1
+    },
+    {
+     "id": "rubens",
+     "gols": 2,
+     "assist": 1
+    },
+    {
+     "id": "yuri",
+     "gols": 1,
+     "assist": 2,
+     "honras": {
+      "top3a_s": 1
+     }
+    },
+    {
+     "id": "carlos",
+     "gols": 0,
+     "assist": 2,
+     "nome": "Carlos",
+     "convidado": true
+    },
+    {
+     "id": "rafa",
+     "gols": 1,
+     "assist": 1,
+     "nome": "Rafa",
+     "convidado": true
+    },
+    {
+     "id": "nickolas",
+     "gols": 1,
+     "assist": 0,
+     "nome": "Nickolas",
+     "convidado": true
+    },
+    {
+     "id": "kauan",
+     "gols": 1,
+     "assist": 0
+    },
+    {
+     "id": "thiago",
+     "gols": 1,
+     "assist": 0
+    },
+    {
+     "id": "lucas-marson",
+     "gols": 0,
+     "assist": 1,
+     "nome": "Lucas Marson",
+     "convidado": true
+    }
+   ]
+  }
+ ]
 }

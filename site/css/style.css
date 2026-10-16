@@ -202,7 +202,7 @@ h1, h2, h3 { margin: 0; font-weight: 400; }
 .lider:last-child:nth-child(odd) { grid-column: 1 / -1; }
 @media (max-width: 559px) { .lider { padding: 14px 12px; } .lider-nome { font-size: 24px; } }
 @media (min-width: 560px) { .lideres { gap: 12px; } }
-@media (min-width: 980px) { .lideres { grid-template-columns: repeat(5, 1fr); } .lider:last-child:nth-child(odd) { grid-column: auto; } }
+@media (min-width: 980px) { .lideres { grid-template-columns: repeat(4, 1fr); } .lider:last-child:nth-child(odd) { grid-column: auto; } }
 .lider {
   position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 2px;
   padding: 16px; border-radius: var(--raio); background: var(--surface); border: 1px solid var(--borda);
@@ -381,6 +381,75 @@ body.travado { overflow: hidden; }
 .posicoes .val { color: var(--texto-2); font-variant-numeric: tabular-nums; }
 .perfil-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 
+/* ============ Avisos ============ */
+.aviso {
+  margin: 0 0 14px; padding: 10px 14px; border-radius: 12px; font-size: 13px; color: var(--texto-2);
+  background: color-mix(in srgb, var(--ouro) 9%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ouro) 30%, transparent);
+}
+.aviso[hidden] { display: none; }
+.aba-adms { border-style: dashed; }
+.aba small { font-weight: 500; opacity: .7; margin-left: 4px; }
+
+/* ============ Sala de Troféus ============ */
+.podios { display: grid; gap: 12px; grid-template-columns: 1fr; margin-bottom: 16px; }
+@media (min-width: 760px) { .podios { grid-template-columns: repeat(3, 1fr); } }
+.podio { background: var(--surface); border: 1px solid var(--borda); border-radius: 18px; padding: 16px; }
+.podio header { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+.podio-ic { font-size: 30px; line-height: 1; }
+.podio header b { display: block; font-family: var(--fonte-titulo); font-size: 26px; font-weight: 400; line-height: 1; }
+.podio header small { color: var(--texto-2); font-size: 12px; }
+.podio ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.podio li { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 10px; background: var(--surface-2); cursor: pointer; }
+.podio li:hover { outline: 1px solid var(--borda-forte); }
+.podio li .p { font-family: var(--fonte-titulo); font-size: 20px; color: var(--texto-3); }
+.podio li[data-pos="1"] .p { color: var(--ouro); } .podio li[data-pos="2"] .p { color: var(--prata); } .podio li[data-pos="3"] .p { color: var(--bronze); }
+.podio li[data-pos="1"] { background: color-mix(in srgb, var(--ouro) 12%, var(--surface-2)); }
+.podio li .n { font-weight: 700; }
+.podio li .v { font-family: var(--fonte-titulo); font-size: 22px; }
+.podio li.vazio { display: block; color: var(--texto-3); cursor: default; }
+.legenda-honras { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--texto-2); margin-bottom: 4px; }
+.legenda-honras b { font-size: 15px; }
+.glossario-box { margin-top: 16px; background: var(--surface); border: 1px solid var(--borda); border-radius: 18px; padding: 4px 16px; }
+.glossario-box summary { cursor: pointer; padding: 12px 0; font-weight: 700; }
+.glossario { display: grid; gap: 10px; grid-template-columns: 1fr; padding-bottom: 16px; }
+@media (min-width: 720px) { .glossario { grid-template-columns: repeat(2, 1fr); } }
+.glossario-item { display: flex; gap: 12px; align-items: flex-start; }
+.g-ic { font-size: 22px; width: 30px; text-align: center; }
+.glossario-item b { display: block; }
+.glossario-item span { font-size: 13px; color: var(--texto-2); }
+.glossario-nota { grid-column: 1 / -1; margin: 4px 0 0; font-size: 13px; color: var(--texto-2); }
+
+/* ============ Mês a mês ============ */
+.mes-destaques { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+@media (min-width: 900px) { .mes-destaques { grid-template-columns: repeat(4, 1fr); gap: 12px; } }
+.mes-card { display: flex; flex-direction: column; gap: 2px; padding: 14px; border-radius: var(--raio); background: var(--surface); border: 1px solid var(--borda); }
+.mes-card[data-jogador] { cursor: pointer; }
+.mes-card[data-jogador]:hover { border-color: color-mix(in srgb, var(--ouro) 60%, transparent); }
+.mes-card.vazio { opacity: .6; }
+.mes-card .lider-nome { font-size: 26px; }
+.ranking-compacto .rank-item { padding: 7px 12px; }
+.ranking-compacto .rank-valor { font-size: 24px; }
+.ranking-compacto .rank-pos { font-size: 22px; }
+
+/* ============ Perfil: troféus e notas ============ */
+.estante-grupo h4 { margin: 10px 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--texto-3); }
+.estante { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.trofeu { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border-radius: 14px; background: var(--surface-2); text-align: center; }
+.trofeu .t-ic { font-size: 24px; }
+.trofeu b { font-family: var(--fonte-titulo); font-size: 26px; font-weight: 400; line-height: 1; }
+.trofeu span:last-child { font-size: 11px; color: var(--texto-2); font-weight: 600; }
+.perfil-grade .painel-largo { grid-column: 1 / -1; }
+.painel-adms { border-style: dashed; border-color: color-mix(in srgb, var(--ouro) 40%, transparent); }
+.adms-cab { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.ovr { text-align: center; padding: 8px 14px; border-radius: 14px; background: color-mix(in srgb, var(--ouro) 14%, var(--surface-2)); }
+.ovr b { display: block; font-family: var(--fonte-titulo); font-size: 44px; font-weight: 400; line-height: 1; color: var(--ouro); }
+.ovr span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--texto-2); }
+
+/* ============ Comparar: abas ============ */
+.modos-duelo { margin-bottom: 16px; }
+.duelo-rot small { font-weight: 500; text-transform: none; letter-spacing: 0; }
+.duelo-corpo .painel-largo { grid-column: 1 / -1; }
+
 /* ============ Rodapé / toast ============ */
 .rodape { padding: 28px 0 40px; border-top: 1px solid var(--borda); color: var(--texto-3); font-size: 13px; }
 .rodape .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
@@ -394,4 +463,11 @@ body.travado { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   html { scroll-behavior: auto; }
+}
+
+@media (max-width: 599px) {
+  .duelo-cab { grid-template-columns: 1fr 1fr; }
+  .duelo-cab .placar { grid-column: 1 / -1; order: -1; }
+  .duelista { padding: 12px; }
+  .duelista-nome { font-size: 28px; }
 }
