@@ -51,6 +51,13 @@
 .adm-tabela .remover:hover { color: #d64545; }
 .adm-vazio { padding: 24px; text-align: center; color: var(--texto-3); }
 
+/* Modo leitura (logado, mas não admin) */
+.so-leitura { display: none; }
+.modo-leitura .so-leitura { display: block; }
+.modo-leitura .so-admin { display: none !important; }
+.adm-leitura { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--acento-suave); color: var(--texto-2); font-size: 14px; }
+.adm-tabela td .valor { display: inline-block; min-width: 42px; padding: 5px 4px; font-variant-numeric: tabular-nums; }
+
 .adm-add { display: flex; gap: 8px; flex-wrap: wrap; }
 .adm-add input { width: 220px; }
 

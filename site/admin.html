@@ -39,12 +39,16 @@
       <section class="adm-cartao" id="tela-login" hidden>
         <p class="kicker">Área dos adms</p>
         <h1 class="adm-titulo">Entrar</h1>
-        <p class="painel-desc">Digite seu e-mail e enviaremos um link de acesso. Não precisa de senha.</p>
+        <p class="painel-desc">Digite seu e-mail e enviaremos um link de acesso e um código. Não precisa de senha. Você continua logado neste navegador até clicar em Sair.</p>
         <form id="form-login" class="adm-form">
           <input type="email" id="login-email" required placeholder="seu@email.com" autocomplete="email">
           <button class="btn btn-primario" type="submit">Enviar link</button>
         </form>
         <p class="adm-msg" id="login-msg" role="status"></p>
+        <form id="form-codigo" class="adm-form" hidden>
+          <input id="login-codigo" inputmode="numeric" autocomplete="one-time-code" required placeholder="Código do e-mail" aria-label="Código do e-mail">
+          <button class="btn btn-primario" type="submit">Entrar</button>
+        </form>
       </section>
 
       <!-- SEM ACESSO -->
@@ -60,22 +64,23 @@
         <header class="secao-cab">
           <div>
             <p class="kicker">Painel</p>
-            <h1 class="adm-titulo">Editar dados</h1>
+            <h1 class="adm-titulo" id="painel-titulo">Editar dados</h1>
           </div>
           <div class="adm-temporada">
             <label for="sel-temporada">Temporada</label>
             <select id="sel-temporada"></select>
-            <input id="nova-temporada" placeholder="Nova (ex.: 2027)" size="10" aria-label="Nova temporada">
-            <button class="btn" id="btn-nova-temporada">Criar</button>
+            <input class="so-admin" id="nova-temporada" placeholder="Nova (ex.: 2027)" size="10" aria-label="Nova temporada">
+            <button class="btn so-admin" id="btn-nova-temporada">Criar</button>
           </div>
         </header>
+        <p class="adm-leitura so-leitura">👀 Modo leitura: você vê os dados, mas só os adms editam. Para editar, peça a um adm para liberar o seu e-mail.</p>
 
         <div class="abas" id="abas" role="tablist">
           <button class="aba ativa" data-aba="temporada">📊 Temporada</button>
           <button class="aba" data-aba="mes">📅 Mês</button>
           <button class="aba" data-aba="honrarias">🏆 Honrarias</button>
           <button class="aba" data-aba="over">📝 Notas Over</button>
-          <button class="aba" data-aba="admins">🔑 Admins</button>
+          <button class="aba so-admin" data-aba="admins">🔑 Admins</button>
         </div>
 
         <div id="conteudo"></div>

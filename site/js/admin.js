@@ -137,8 +137,11 @@
     $('#usuario-email').textContent = st.usuario?.email || '';
     if (!st.usuario) return mostrar('login');
     try {
-      const admin = ok(await sb.rpc('is_admin'));
-      if (!admin) return mostrar('sem-acesso');
+      // Quem não é admin vê o mesmo painel em modo leitura
+      st.leitura = !ok(await sb.rpc('is_admin'));
+      document.body.classList.toggle('modo-leitura', st.leitura);
+      $('#painel-titulo').textContent = st.leitura ? 'Ver dados' : 'Editar dados';
+      if (st.leitura && st.aba === 'admins') st.aba = 'temporada';
       await carregarBase();
       mostrar('painel');
       await abrirAba(st.aba);
@@ -170,7 +173,31 @@
         : 'Não foi possível enviar: ' + error.message;
       return;
     }
-    msg.textContent = `Pronto! Abra o link enviado para ${email}. Se não aparecer, olhe o spam.`;
+    msg.textContent = `Pronto! Abra o link enviado para ${email} neste navegador, ou digite aqui o código do e-mail. Se não aparecer, olhe o spam.`;
+    $('#form-codigo').hidden = false;
+    $('#login-codigo').focus();
+  }
+
+  // Código do e-mail: entra nesta aba mesmo se o link abrir em outro navegador/app
+  async function entrarComCodigo(ev) {
+    ev.preventDefault();
+    const email = $('#login-email').value.trim().toLowerCase();
+    const token = $('#login-codigo').value.replace(/\D/g, '');
+    const msg = $('#login-msg');
+    const btn = $('#form-codigo button');
+    btn.disabled = true;
+    msg.classList.remove('erro');
+    msg.textContent = 'Entrando…';
+    const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+    btn.disabled = false;
+    if (error) {
+      msg.classList.add('erro');
+      msg.textContent = 'Código inválido ou expirado. Confira ou peça um novo.';
+      return;
+    }
+    $('#form-codigo').hidden = true;
+    $('#login-codigo').value = '';
+    msg.textContent = '';
   }
 
   /* ---------------- Dados base ---------------- */
@@ -382,13 +409,15 @@
   function renderGrade() {
     const a = ABAS[st.aba];
     const cols = a.cols();
+    const edita = !st.leitura;
+    const podeRemover = edita && a.podeRemover;
     const seletorMes = st.aba === 'mes' ? `
       <select id="sel-mes" aria-label="Mês">
         ${[...new Set([...st.meses, st.mes])].sort().map(m => `<option value="${m}" ${m === st.mes ? 'selected' : ''}>${NOME_MES[+m.slice(5, 7)]} ${m.slice(0, 4)}${st.meses.includes(m) ? '' : ' (novo)'}</option>`).join('')}
       </select>
-      <input type="month" id="novo-mes" aria-label="Abrir outro mês">
-      <button class="btn" id="btn-novo-mes">Abrir mês</button>` : '';
-    const adicionar = a.podeAdicionar ? `
+      ${edita ? `<input type="month" id="novo-mes" aria-label="Abrir outro mês">
+      <button class="btn" id="btn-novo-mes">Abrir mês</button>` : ''}` : '';
+    const adicionar = edita && a.podeAdicionar ? `
       <div class="adm-add">
         <input list="lista-jogadores" id="add-nome" placeholder="Nome do jogador" autocomplete="off">
         <button class="btn" id="btn-add">Adicionar</button>
@@ -403,7 +432,7 @@
     $('#conteudo').innerHTML = `
       <p class="painel-desc">${a.desc}</p>
       <div class="adm-barra">${seletorMes}</div>
-      <details class="adm-csv" ${st.avisos.length ? 'open' : ''}>
+      ${edita ? `<details class="adm-csv" ${st.avisos.length ? 'open' : ''}>
         <summary>📋 Colar da planilha (aba ${esc(a.csv)})</summary>
         <p>Selecione a aba inteira no Google Planilhas (Ctrl+A), copie (Ctrl+C) e cole aqui. Também aceita o conteúdo de um .csv exportado. Nada é gravado até você clicar em Salvar.</p>
         <textarea id="csv" placeholder="Jogadores,Gols,Assist,…"></textarea>
@@ -416,23 +445,24 @@
         <span class="adm-sujo" id="aviso-sujo" ${st.sujo ? '' : 'hidden'}>Alterações não salvas</span>
         <button class="btn" id="btn-desfazer">Recarregar</button>
         <button class="btn btn-primario" id="btn-salvar">Salvar</button>
-      </div>
+      </div>` : ''}
       <div class="adm-tabela-box">
         ${st.linhas.length ? `
         <table class="adm-tabela">
-          <thead><tr><th>Jogador</th>${cols.map(c => `<th title="${esc(c.t || c.r)}" class="${c.g === 'm' ? 'grupo-m' : ''}">${esc(c.r)}</th>`).join('')}${a.podeRemover ? '<th></th>' : ''}</tr></thead>
+          <thead><tr><th>Jogador</th>${cols.map(c => `<th title="${esc(c.t || c.r)}" class="${c.g === 'm' ? 'grupo-m' : ''}">${esc(c.r)}</th>`).join('')}${podeRemover ? '<th></th>' : ''}</tr></thead>
           <tbody>${st.linhas.map((l, i) => `
             <tr class="${l.novo ? 'novo' : l.convidado ? 'convidado' : ''}">
               <td>${esc(l.nome)}</td>
               ${cols.map(c => {
                 const v = l.v[c.k];
                 const mostra = v == null || (c.h && !v) ? '' : v;
+                if (!edita) return `<td class="${c.h ? 'h' : ''} ${c.g === 'm' ? 'grupo-m' : ''}"><span class="valor">${mostra}</span></td>`;
                 return `<td class="${c.h ? 'h' : ''} ${c.g === 'm' ? 'grupo-m' : ''}"><input type="number" min="0" max="${a.vazioEhNulo ? 99 : ''}" inputmode="numeric" data-i="${i}" data-k="${c.k}" value="${mostra}" aria-label="${esc(l.nome)} · ${esc(c.t || c.r)}"></td>`;
               }).join('')}
-              ${a.podeRemover ? `<td><button class="remover" data-remover="${i}" aria-label="Remover ${esc(l.nome)}">×</button></td>` : ''}
+              ${podeRemover ? `<td><button class="remover" data-remover="${i}" aria-label="Remover ${esc(l.nome)}">×</button></td>` : ''}
             </tr>`).join('')}
           </tbody>
-        </table>` : `<p class="adm-vazio">${st.aba === 'temporada' || st.aba === 'mes' ? 'Nenhum jogador ainda. Adicione ou cole da planilha.' : 'O elenco da temporada está vazio. Cadastre os jogadores na aba Temporada.'}</p>`}
+        </table>` : `<p class="adm-vazio">${st.leitura ? 'Nada cadastrado ainda.' : st.aba === 'temporada' || st.aba === 'mes' ?'Nenhum jogador ainda. Adicione ou cole da planilha.' : 'O elenco da temporada está vazio. Cadastre os jogadores na aba Temporada.'}</p>`}
       </div>
       ${conferencia}`;
   }
@@ -527,6 +557,7 @@
   /* ---------------- Eventos ---------------- */
   function ligarEventos() {
     $('#form-login').addEventListener('submit', enviarLink);
+    $('#form-codigo').addEventListener('submit', entrarComCodigo);
     $('#btn-sair').addEventListener('click', async () => {
       if (!confirmarDescarte()) return;
       marcarSujo(false);
