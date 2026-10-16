@@ -511,3 +511,7 @@ body.travado { overflow: hidden; }
 .busca-hist input { padding-top: 6px; padding-bottom: 6px; font-size: 14px; }
 .busca-hist input:disabled { opacity: .5; }
 .hist-dica { font-size: 12px; color: var(--texto-3); width: 100%; }
+
+/* Perfil: cabeçalho do mês a mês com seletor G+A / Gols / Assist. */
+.mes-perfil-cab { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.mes-perfil-cab .seg-pequeno { margin-bottom: 0; }

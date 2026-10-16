@@ -185,7 +185,12 @@ const Charts = (() => {
     const cores = { acento: tok('acento'), neutro: tok('texto-3'), 's-a': tok('s-a'), 's-b': tok('s-b') };
     return {
       ...base(),
-      tooltip: { ...base().tooltip, trigger: 'item' },
+      tooltip: {
+        ...base().tooltip, trigger: 'item',
+        // nomes completos dos atributos (o eixo usa texto rico "{n|…}", que o tooltip não entende)
+        formatter: p => `<b>${esc(p.name)}</b><br>` + atributos.map(([sigla, nome], i) =>
+          `${sigla} · ${nome}: <b>${p.value[i]}</b>`).join('<br>'),
+      },
       legend: legenda ? { bottom: 0, icon: 'roundRect', itemWidth: 12, itemHeight: 12, textStyle: { color: tok('texto-2'), fontWeight: 600 } } : undefined,
       radar: {
         center: ['50%', legenda ? '46%' : '52%'],
@@ -306,7 +311,7 @@ const Charts = (() => {
   function opHistorico({ meses, series, destaques, modo, unidade }) {
     const pos = modo === 'pos';
     const maxPos = Math.max(1, ...series.flatMap(s => s.posicoes.filter(Boolean)));
-    const fmt = (s, i) => s.brutos[i] ? `${s.posicoes[i]}º · ${s.brutos[i]} ${unidade}` : 'não pontuou';
+    const fmt = (s, i) => s.brutos[i] ? `${s.posicoes[i]}º · ${s.brutos[i]} ${unidade}` : `não pontuou${pos ? ` (fim da fila, ${s.posicoes[i]}º)` : ''}`;
     return {
       ...base(),
       grid: { left: 8, right: estreito() ? 80 : 110, top: 16, bottom: 8, containLabel: true },
@@ -315,7 +320,7 @@ const Charts = (() => {
         formatter: ps => {
           const i = ps[0].dataIndex;
           const lista = destaques.length ? series.filter(s => destaques.includes(s.id))
-            : series.filter(s => s.posicoes[i]).sort((a, b) => a.posicoes[i] - b.posicoes[i]).slice(0, 8);
+            : series.filter(s => s.brutos[i]).sort((a, b) => a.posicoes[i] - b.posicoes[i]).slice(0, 8);
           return `<b>${meses[i]}</b><br>` + lista.map(s => `${esc(s.nome)}: <b>${fmt(s, i)}</b>`).join('<br>');
         },
       },
@@ -328,15 +333,15 @@ const Charts = (() => {
         const k = destaques.indexOf(s.id), est = ESTILOS[k], d = k >= 0;
         const cor = d ? tok(est.cor) : tok('borda-forte');
         return {
-          name: s.nome, type: 'line', id: s.id, connectNulls: false,
-          data: pos ? s.posicoes.map(v => v || null) : s.brutos,
+          name: s.nome, type: 'line', id: s.id,
+          data: pos ? s.posicoes : s.brutos,
           symbol: d ? est.simbolo : 'circle', symbolSize: d ? 9 : 3, showSymbol: d,
           z: d ? 5 : 1, silent: !d && destaques.length > 0,
           lineStyle: { width: d ? 3 : 1, color: cor, type: d ? est.tipo : 'solid', opacity: d || !destaques.length ? 1 : .55 },
           itemStyle: { color: cor, borderColor: tok('surface'), borderWidth: 2 },
           emphasis: { focus: 'series', lineStyle: { width: d ? 3.5 : 2.5 } },
           blur: { lineStyle: { opacity: .2 } },
-          endLabel: d ? { show: true, formatter: p => `${s.nome}  ${pos ? (p.value ? p.value + 'º' : '—') : p.value}`, color: cor, fontWeight: 800, fontSize: 12 } : undefined,
+          endLabel: d ? { show: true, formatter: p => `${s.nome}  ${pos ? (s.brutos.at(-1) ? p.value + 'º' : '—') : p.value}`, color: cor, fontWeight: 800, fontSize: 12 } : undefined,
           labelLayout: { moveOverlap: 'shiftY' },
         };
       }),
@@ -345,7 +350,9 @@ const Charts = (() => {
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   /* Barras empilhadas de gols + assistências por mês (perfil) */
-  function opBarrasMes({ meses, gols, assist, mediaJogador, mediaGrupo }) {
+  function opBarrasMes({ meses, gols, assist, mediaJogador, mediaGrupo, metrica = 'ga' }) {
+    const total = i => metrica === 'ga' ? gols[i] + assist[i] : metrica === 'gols' ? gols[i] : assist[i];
+    const rotulo = { ga: 'G+A', gols: 'Gols', assist: 'Assistências' }[metrica];
     // Linhas de média: horizontais, tracejadas, com o valor na ponta direita
     const media = (nome, valor, cor, tipo) => ({
       name: nome, type: 'line', data: meses.map(() => +valor.toFixed(1)), z: 5,
@@ -358,7 +365,7 @@ const Charts = (() => {
     const seg = (nome, dados, cor, topo) => ({
       name: nome, type: 'bar', stack: 'm', barMaxWidth: 26, data: dados,
       itemStyle: { color: cor, borderColor: tok('surface'), borderWidth: 1, borderRadius: topo ? [4, 4, 0, 0] : 0 },
-      label: topo ? { show: true, position: 'top', color: tok('texto'), fontWeight: 700, fontSize: 11, formatter: p => (gols[p.dataIndex] + assist[p.dataIndex]) || '' } : undefined,
+      label: topo ? { show: true, position: 'top', color: tok('texto'), fontWeight: 700, fontSize: 11, formatter: p => total(p.dataIndex) || '' } : undefined,
     });
     return {
       ...base(),
@@ -367,18 +374,20 @@ const Charts = (() => {
       tooltip: {
         ...base().tooltip, trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: tok('acento-suave') } },
         formatter: ps => {
-          const i = ps[0].dataIndex, ga = gols[i] + assist[i];
+          const i = ps[0].dataIndex, v = total(i), jogou = gols[i] + assist[i] > 0;
           return `<b>${meses[i]}</b><br>${ps.filter(p => p.seriesType === 'bar').map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>')}`
-            + `<br>G+A: <b>${ga}</b>${ga ? ` · ${ga >= mediaJogador ? 'acima' : 'abaixo'} da média dele (${dec(mediaJogador)})` : ''}`
+            + (metrica === 'ga' ? `<br>G+A: <b>${v}</b>` : '')
+            + (jogou ? `<br>${v >= mediaJogador ? 'Acima' : 'Abaixo'} da média dele (${dec(mediaJogador)})` : '<br>Não pontuou no mês')
             + `<br><span style="opacity:.7">Média do Fut CDM: ${dec(mediaGrupo)}</span>`;
         },
       },
       xAxis: { type: 'category', data: meses, axisTick: { show: false }, axisLine: { lineStyle: { color: tok('borda-forte') } }, axisLabel: { color: tok('texto-2'), fontSize: 11 } },
       yAxis: { type: 'value', axisLabel: { color: tok('texto-3'), fontSize: 11 }, splitLine: { lineStyle: { color: tok('borda'), type: [3, 4] } } },
       series: [
-        seg('Gols', gols, tok('s-gols'), false), seg('Assistências', assist, tok('s-assist'), true),
-        ...(mediaJogador ? [media('Média do jogador', mediaJogador, tok('ouro'), [6, 4])] : []),
-        ...(mediaGrupo ? [media('Média do Fut CDM', mediaGrupo, tok('texto-2'), [2, 4])] : []),
+        ...(metrica === 'ga' ? [seg('Gols', gols, tok('s-gols'), false), seg('Assistências', assist, tok('s-assist'), true)]
+          : metrica === 'gols' ? [seg('Gols', gols, tok('s-gols'), true)] : [seg('Assistências', assist, tok('s-assist'), true)]),
+        ...(mediaJogador ? [media(`Média do jogador (${rotulo})`, mediaJogador, tok('ouro'), [6, 4])] : []),
+        ...(mediaGrupo ? [media(`Média do Fut CDM (${rotulo})`, mediaGrupo, tok('texto-2'), [2, 4])] : []),
       ],
     };
   }

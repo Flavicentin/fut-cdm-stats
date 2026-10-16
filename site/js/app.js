@@ -95,6 +95,8 @@
     histModo: 'pos',
     histMet: 'ga',
     histSel: [],
+    perfilMet: 'ga',
+    perfilId: null,
     a: null,
     b: null,
     modo: 'numeros',
@@ -367,7 +369,8 @@
     const series = state.comJogos.filter(j => j.porMes.some(i => val(i) > 0)).map(j => ({
       id: j.id, nome: j.nome,
       brutos: j.porMes.map(val),
-      posicoes: posMes.map(p => p[j.id] || 0),
+      // quem não pontuou no mês vai para o fim da fila (uma posição depois do último), sem quebrar a linha
+      posicoes: posMes.map(p => p[j.id] || Math.max(0, ...Object.values(p)) + 1),
     }));
     // Visão geral: sem ninguém escolhido, os 3 melhores da temporada ficam em destaque
     const geral = !state.histSel.length;
@@ -458,8 +461,13 @@
         </article>` : ''}
         ${state.meses.length && j.porMes.some(i => i.gols + i.assist) ? `
         <article class="painel painel-largo">
-          <h3>Mês a mês</h3>
-          <p class="painel-desc">Gols e assistências em cada mês. As linhas tracejadas são a média de G+A por mês do jogador e a do Fut CDM, contando só os meses em que cada um entrou em campo.</p>
+          <div class="mes-perfil-cab">
+            <h3>Mês a mês</h3>
+            <div class="seg seg-pequeno" id="seg-mes-perfil" role="group" aria-label="Métrica">
+              ${[['ga', 'G+A'], ['gols', 'Gols'], ['assist', 'Assist.']].map(([k, r]) => `<button data-pm="${k}"${k === state.perfilMet ? ' class="ativo"' : ''}>${r}</button>`).join('')}
+            </div>
+          </div>
+          <p class="painel-desc">As linhas tracejadas são a média por mês do jogador e a do Fut CDM, contando só os meses em que cada um entrou em campo.</p>
           <div class="grafico" id="g-meses-perfil" style="height:260px"></div>
         </article>` : ''}
         ${j.over ? `
@@ -482,10 +490,8 @@
       { nome: j.nome, valores: ATRIBUTOS.map(([s]) => j.attrs[s]), cor: 'acento' },
       { nome: 'Média do grupo', valores: ATRIBUTOS.map(([s]) => Math.round(state.mediaAttrs[s])), cor: 'neutro' },
     ], ATRIBUTOS);
-    if ($('#g-meses-perfil')) Charts.barrasMes($('#g-meses-perfil'), {
-      meses: state.meses.map(m => curtoMes(m.mes)), gols: j.porMes.map(i => i.gols), assist: j.porMes.map(i => i.assist),
-      mediaJogador: mediaMensal([j]), mediaGrupo: mediaMensal(state.comJogos),
-    });
+    state.perfilId = j.id;
+    desenharMesesPerfil();
     if (j.over) Charts.radar($('#g-notas-perfil'), [
       { nome: j.nome, valores: NOTAS.map(([, , k]) => j.over[k]), cor: 'acento' },
       { nome: 'Média do grupo', valores: NOTAS.map(([, , k]) => Math.round(state.mediaNotas[k])), cor: 'neutro' },
@@ -493,10 +499,21 @@
     $('.modal-fechar').focus();
   }
 
-  // Média de G+A por mês, só nos meses em que o jogador participou (G+A > 0)
-  function mediaMensal(lista) {
-    const vals = lista.flatMap(j => j.porMes.map(i => i.gols + i.assist).filter(v => v > 0));
+  // Média por mês da métrica, só nos meses em que o jogador participou (G+A > 0)
+  function mediaMensal(lista, met = 'ga') {
+    const val = i => met === 'ga' ? i.gols + i.assist : i[met];
+    const vals = lista.flatMap(j => j.porMes.filter(i => i.gols + i.assist > 0).map(val));
     return vals.length ? vals.reduce((t, v) => t + v, 0) / vals.length : 0;
+  }
+
+  function desenharMesesPerfil() {
+    const j = state.porId[state.perfilId], el = $('#g-meses-perfil');
+    if (!j || !el) return;
+    const met = state.perfilMet;
+    Charts.barrasMes(el, {
+      meses: state.meses.map(m => curtoMes(m.mes)), gols: j.porMes.map(i => i.gols), assist: j.porMes.map(i => i.assist),
+      metrica: met, mediaJogador: mediaMensal([j], met), mediaGrupo: mediaMensal(state.comJogos, met),
+    });
   }
 
   function fecharPerfil() {
@@ -767,6 +784,14 @@
       if (!b) return;
       state.histSel = state.histSel.filter(id => id !== b.dataset.tirar);
       renderHistorico();
+    });
+    // Alterna G+A / Gols / Assist. no mês a mês do perfil (o conteúdo do modal é recriado a cada perfil)
+    $('#perfil').addEventListener('click', e => {
+      const b = e.target.closest('[data-pm]');
+      if (!b) return;
+      state.perfilMet = b.dataset.pm;
+      $$('#seg-mes-perfil [data-pm]').forEach(x => x.classList.toggle('ativo', x === b));
+      desenharMesesPerfil();
     });
     autocomplete($('.sel-a .busca'), id => definirDuelo(id, null));
     autocomplete($('.sel-b .busca'), id => definirDuelo(null, id));
