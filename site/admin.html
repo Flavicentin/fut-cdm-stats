@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fut CDM · Admin</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#070b09">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <script>
+    try { const t = localStorage.getItem('tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-inner">
+      <a href="./" class="logo" aria-label="Voltar ao site">
+        <span class="logo-bola">⚽</span>
+        <span class="logo-texto">FUT <b>CDM</b></span>
+        <span class="logo-ano">ADMIN</span>
+      </a>
+      <div class="adm-usuario" id="usuario" hidden>
+        <span id="usuario-email"></span>
+        <button class="btn" id="btn-sair">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="adm">
+    <div class="wrap">
+      <p class="adm-carregando" id="carregando">Carregando…</p>
+
+      <!-- LOGIN -->
+      <section class="adm-cartao" id="tela-login" hidden>
+        <p class="kicker">Área dos adms</p>
+        <h1 class="adm-titulo">Entrar</h1>
+        <p class="painel-desc">Digite seu e-mail e enviaremos um link de acesso. Não precisa de senha.</p>
+        <form id="form-login" class="adm-form">
+          <input type="email" id="login-email" required placeholder="seu@email.com" autocomplete="email">
+          <button class="btn btn-primario" type="submit">Enviar link</button>
+        </form>
+        <p class="adm-msg" id="login-msg" role="status"></p>
+      </section>
+
+      <!-- SEM ACESSO -->
+      <section class="adm-cartao" id="tela-sem-acesso" hidden>
+        <p class="kicker">Conta criada</p>
+        <h1 class="adm-titulo">Sem acesso de admin</h1>
+        <p class="painel-desc">Você está logado, mas só os adms editam os dados. Peça para um adm liberar o seu e-mail.</p>
+        <a class="btn" href="./">Voltar ao site</a>
+      </section>
+
+      <!-- PAINEL -->
+      <section id="tela-painel" hidden>
+        <header class="secao-cab">
+          <div>
+            <p class="kicker">Painel</p>
+            <h1 class="adm-titulo">Editar dados</h1>
+          </div>
+          <div class="adm-temporada">
+            <label for="sel-temporada">Temporada</label>
+            <select id="sel-temporada"></select>
+            <input id="nova-temporada" placeholder="Nova (ex.: 2027)" size="10" aria-label="Nova temporada">
+            <button class="btn" id="btn-nova-temporada">Criar</button>
+          </div>
+        </header>
+
+        <div class="abas" id="abas" role="tablist">
+          <button class="aba ativa" data-aba="temporada">📊 Temporada</button>
+          <button class="aba" data-aba="mes">📅 Mês</button>
+          <button class="aba" data-aba="honrarias">🏆 Honrarias</button>
+          <button class="aba" data-aba="over">📝 Notas Over</button>
+          <button class="aba" data-aba="admins">🔑 Admins</button>
+        </div>
+
+        <div id="conteudo"></div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

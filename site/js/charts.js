@@ -70,7 +70,7 @@ const Charts = (() => {
       ],
       tooltip: {
         ...base().tooltip,
-        formatter: p => `<b>${p.data.name}</b><br>${dec(p.value[0])} gols/jogo<br>${dec(p.value[1])} assist/jogo<br><span style="opacity:.7">${p.data.partidas} jogos</span>`,
+        formatter: p => `<b>${esc(p.data.name)}</b><br>${dec(p.value[0])} gols/jogo<br>${dec(p.value[1])} assist/jogo<br><span style="opacity:.7">${p.data.partidas} jogos</span>`,
       },
       series: [{
         type: 'scatter',
@@ -100,7 +100,7 @@ const Charts = (() => {
       yAxis: eixo('G+A por jogo', { min: 0, max: v => Math.ceil(v.max + .5) }),
       tooltip: {
         ...base().tooltip,
-        formatter: p => `<b>${p.data.name}</b><br>${p.value[0]} jogos<br>${dec(p.value[1])} G+A por jogo<br>${p.data.ga} G+A no total`,
+        formatter: p => `<b>${esc(p.data.name)}</b><br>${p.value[0]} jogos<br>${dec(p.value[1])} G+A por jogo<br>${p.data.ga} G+A no total`,
       },
       series: [{
         type: 'scatter',
@@ -134,7 +134,7 @@ const Charts = (() => {
     });
     return {
       ...base(),
-      tooltip: { ...base().tooltip, formatter: p => `<b>${p.name}</b><br>${p.value} ${rot} · ${(p.value / total * 100).toFixed(1).replace('.', ',')}% do total` },
+      tooltip: { ...base().tooltip, formatter: p => `<b>${esc(p.name)}</b><br>${p.value} ${rot} · ${(p.value / total * 100).toFixed(1).replace('.', ',')}% do total` },
       series: [{
         type: 'treemap',
         roam: false, nodeClick: false, breadcrumb: { show: false },
@@ -171,7 +171,7 @@ const Charts = (() => {
         ...base().tooltip, trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: tok('acento-suave') } },
         formatter: ps => {
           const j = ord[ps[0].dataIndex];
-          return `<b>${j.nome}</b><br>${ps.map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>')}<br>G+A: <b>${j.ga}</b> · ${Math.round(j.gols / j.ga * 100)}% em gols`;
+          return `<b>${esc(j.nome)}</b><br>${ps.map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>')}<br>G+A: <b>${j.ga}</b> · ${Math.round(j.gols / j.ga * 100)}% em gols`;
         },
       },
       xAxis: { type: 'value', axisLabel: { color: tok('texto-3'), fontSize: 11 }, splitLine: { lineStyle: { color: tok('borda'), type: [3, 4] } } },
@@ -236,7 +236,7 @@ const Charts = (() => {
       grid: { left: 4, right: 8, top: 34, bottom: 8, containLabel: true },
       tooltip: {
         ...base().tooltip,
-        formatter: p => p.value[2] === '-' ? '' : `<b>${linhas[p.value[1]].nome}</b><br>${colunas[p.value[0]].titulo}: <b>${p.value[2]}</b>${unidade}`,
+        formatter: p => p.value[2] === '-' ? '' : `<b>${esc(linhas[p.value[1]].nome)}</b><br>${colunas[p.value[0]].titulo}: <b>${p.value[2]}</b>${unidade}`,
       },
       xAxis: {
         type: 'category', position: 'top', data: colunas.map(c => c.rotulo),
@@ -277,7 +277,7 @@ const Charts = (() => {
         ...base().tooltip, trigger: 'axis',
         formatter: ps => {
           const linhas = ps.filter(p => p.value > 0).sort((a, b) => b.value - a.value).slice(0, 8);
-          return `<b>${ps[0].axisValue}</b><br>` + linhas.map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>');
+          return `<b>${ps[0].axisValue}</b><br>` + linhas.map(p => `${p.marker}${esc(p.seriesName)}: <b>${p.value}</b>`).join('<br>');
         },
       },
       xAxis: { ...eixo(''), type: 'category', boundaryGap: false, data: meses, splitLine: { show: false } },

@@ -1,0 +1,64 @@
+/* Fut CDM — página de admin (usa os tokens de style.css). */
+[hidden] { display: none !important; }
+.adm { padding: 32px 0 64px; min-height: 70vh; }
+.adm-titulo { font-family: var(--fonte-titulo); font-size: clamp(36px, 7vw, 52px); line-height: .95; }
+.adm-carregando { color: var(--texto-3); }
+.adm-cartao { max-width: 440px; margin: 40px auto; background: var(--surface); border: 1px solid var(--borda); border-radius: 20px; padding: 24px; }
+.adm-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.adm-form input { flex: 1 1 200px; }
+.adm-msg { margin: 12px 0 0; font-size: 14px; color: var(--texto-2); min-height: 1.2em; }
+.adm-msg.erro, .adm-erro { color: #d64545; }
+
+.adm input, .adm select, .adm textarea {
+  font: inherit; font-size: 14px; color: var(--texto); background: var(--surface);
+  border: 1px solid var(--borda-forte); border-radius: 10px; padding: 8px 10px; min-width: 0;
+}
+.adm input:focus, .adm select:focus, .adm textarea:focus { outline: 2px solid var(--acento); outline-offset: -1px; border-color: transparent; }
+.adm textarea { width: 100%; min-height: 140px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+
+.btn-primario { background: var(--acento); border-color: var(--acento); color: #04150a; font-weight: 700; }
+.btn-primario:hover { color: #04150a; filter: brightness(1.08); }
+.btn-primario:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+.btn-perigo:hover { border-color: #d64545; color: #d64545; }
+
+.adm-usuario { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--texto-2); min-width: 0; }
+.adm-usuario span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.adm-temporada { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--texto-2); }
+
+.adm-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 12px; }
+.adm-barra .espaco { flex: 1; }
+.adm-sujo { font-size: 13px; color: var(--ouro); font-weight: 600; }
+
+.adm-csv { margin: 0 0 12px; background: var(--surface); border: 1px dashed var(--borda-forte); border-radius: 14px; padding: 12px; }
+.adm-csv summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+.adm-csv p { font-size: 13px; color: var(--texto-2); margin: 8px 0; }
+.adm-csv .adm-barra { margin: 8px 0 0; }
+.adm-avisos { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--ouro); }
+
+.adm-tabela-box { overflow-x: auto; background: var(--surface); border: 1px solid var(--borda); border-radius: 16px; }
+.adm-tabela { border-collapse: collapse; width: 100%; font-size: 14px; }
+.adm-tabela th, .adm-tabela td { padding: 4px 6px; border-bottom: 1px solid var(--borda); text-align: center; white-space: nowrap; }
+.adm-tabela th { position: sticky; top: 0; background: var(--surface-2); font-size: 12px; font-weight: 700; color: var(--texto-2); }
+.adm-tabela th:first-child, .adm-tabela td:first-child { position: sticky; left: 0; z-index: 1; text-align: left; background: var(--surface); padding-left: 12px; }
+.adm-tabela th:first-child { background: var(--surface-2); z-index: 2; }
+.adm-tabela td input { width: 58px; text-align: center; padding: 5px 4px; }
+.adm-tabela td.h input { width: 42px; }
+.adm-tabela .grupo-m { background: color-mix(in srgb, var(--acento) 6%, transparent); }
+.adm-tabela tr.novo td:first-child::after { content: ' novo'; font-size: 11px; color: var(--acento); font-weight: 700; }
+.adm-tabela tr.convidado td:first-child::after { content: ' convidado'; font-size: 11px; color: var(--texto-3); font-weight: 600; }
+.adm-tabela .remover { border: 0; background: none; color: var(--texto-3); font-size: 18px; line-height: 1; padding: 2px 6px; cursor: pointer; }
+.adm-tabela .remover:hover { color: #d64545; }
+.adm-vazio { padding: 24px; text-align: center; color: var(--texto-3); }
+
+.adm-add { display: flex; gap: 8px; flex-wrap: wrap; }
+.adm-add input { width: 220px; }
+
+.adm-lista { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--borda); border-radius: 16px; }
+.adm-lista li { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--borda); font-size: 14px; flex-wrap: wrap; }
+.adm-lista li:last-child { border-bottom: 0; }
+.adm-lista .grow { flex: 1; min-width: 160px; overflow-wrap: anywhere; }
+.adm-tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--acento-suave); color: var(--acento); }
+.adm-sub { font-family: var(--fonte-titulo); font-size: 26px; margin: 24px 0 8px; }
+.adm-conf { margin-top: 16px; font-size: 13px; color: var(--texto-2); }
+.adm-conf summary { cursor: pointer; font-weight: 600; }

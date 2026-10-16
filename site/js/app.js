@@ -104,8 +104,7 @@
 
   /* ---------------- Dados ---------------- */
   async function carregar() {
-    const temporadas = await fetch('data/temporadas.json').then(r => r.json());
-    const dados = await fetch(`data/${temporadas[0]}.json`).then(r => r.json());
+    const dados = await Db.carregarTemporada();
     state.temporada = dados.temporada;
     state.atualizado = dados.atualizado_em;
     state.jogadores = dados.jogadores.map(j => {
@@ -821,7 +820,7 @@
     try {
       await carregar();
     } catch (e) {
-      document.querySelector('main').innerHTML = `<div class="wrap" style="padding:80px 16px"><h2>Não foi possível carregar os dados.</h2><p>Abra o site por um servidor (ex.: <code>python -m http.server</code>), não direto pelo arquivo.</p></div>`;
+      document.querySelector('main').innerHTML = `<div class="wrap" style="padding:80px 16px"><h2>Não foi possível carregar os dados.</h2><p>Verifique a conexão e recarregue a página.</p></div>`;
       console.error(e);
       return;
     }
