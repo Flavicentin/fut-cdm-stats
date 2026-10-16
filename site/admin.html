@@ -46,12 +46,8 @@
           <input type="password" id="login-senha" required placeholder="Senha" autocomplete="current-password" aria-label="Senha">
           <button class="btn btn-primario" type="submit">Entrar</button>
         </form>
-        <button class="adm-link" id="btn-link" type="button">Primeiro acesso ou esqueceu a senha? Receber código por e-mail</button>
+        <button class="adm-link" id="btn-link" type="button">Primeiro acesso ou esqueceu a senha? Receber link por e-mail</button>
         <p class="adm-msg" id="login-msg" role="status"></p>
-        <form id="form-codigo" class="adm-form" hidden>
-          <input id="login-codigo" inputmode="numeric" autocomplete="one-time-code" required placeholder="Código do e-mail" aria-label="Código do e-mail">
-          <button class="btn btn-primario" type="submit">Entrar</button>
-        </form>
       </section>
 
       <!-- PAINEL -->
@@ -68,17 +64,6 @@
             <button class="btn" id="btn-nova-temporada">Criar</button>
           </div>
         </header>
-        <form class="adm-senha" id="form-senha" hidden>
-          <p class="adm-senha-titulo" id="senha-titulo">Criar ou trocar sua senha</p>
-          <div class="adm-form">
-            <input type="password" id="nova-senha" required minlength="8" placeholder="Nova senha (mín. 8)" autocomplete="new-password" aria-label="Nova senha">
-            <input type="password" id="nova-senha-2" required minlength="8" placeholder="Repita a senha" autocomplete="new-password" aria-label="Repita a senha">
-            <button class="btn btn-primario" type="submit">Salvar senha</button>
-            <button class="btn" type="button" id="btn-senha-fechar">Agora não</button>
-          </div>
-          <p class="adm-msg" id="senha-msg" role="status"></p>
-        </form>
-
         <div class="abas" id="abas" role="tablist">
           <button class="aba ativa" data-aba="temporada">📊 Temporada</button>
           <button class="aba" data-aba="mes">📅 Mês</button>
@@ -91,6 +76,25 @@
       </section>
     </div>
   </main>
+
+  <!-- SENHA (obrigatória no primeiro acesso) -->
+  <div class="adm-modal" id="modal-senha" hidden>
+    <form class="adm-modal-caixa" id="form-senha" role="dialog" aria-modal="true" aria-labelledby="senha-titulo">
+      <p class="kicker" id="senha-kicker">Primeiro acesso</p>
+      <h2 class="adm-titulo adm-modal-titulo" id="senha-titulo">Crie sua senha</h2>
+      <p class="painel-desc" id="senha-desc">Para entrar das próximas vezes direto com e-mail e senha, sem esperar e-mail.</p>
+      <div class="adm-form adm-form-coluna">
+        <input type="password" id="nova-senha" required minlength="8" placeholder="Nova senha (mín. 8 caracteres)" autocomplete="new-password" aria-label="Nova senha">
+        <input type="password" id="nova-senha-2" required minlength="8" placeholder="Repita a senha" autocomplete="new-password" aria-label="Repita a senha">
+        <button class="btn btn-primario" type="submit">Salvar senha</button>
+      </div>
+      <p class="adm-msg" id="senha-msg" role="status"></p>
+      <div class="adm-modal-rodape">
+        <button class="adm-link" type="button" id="btn-senha-fechar">Cancelar</button>
+        <button class="adm-link" type="button" id="btn-senha-sair">Sair</button>
+      </div>
+    </form>
+  </div>
 
   <div class="toast" id="toast" role="status"></div>
 

@@ -139,13 +139,13 @@
     try {
       // A área é só dos adms: quem não é adm é deslogado e usa o site público
       if (!ok(await sb.rpc('is_admin'))) {
-        st.pedirSenha = false;
         await sb.auth.signOut();
         return msgLogin('Este acesso é só para os adms. Os números estão no site público.', true);
       }
       await carregarBase();
       mostrar('painel');
-      if (st.pedirSenha) { st.pedirSenha = false; abrirSenha(true); }
+      // Enquanto o adm não criar a própria senha (link mágico ou senha provisória), o popup é obrigatório
+      if (!st.usuario.user_metadata?.senha_criada) abrirSenha(true);
       await abrirAba(st.aba);
     } catch (e) {
       console.error(e);
@@ -180,7 +180,7 @@
     msgLogin('');
   }
 
-  // Primeiro acesso / esqueci a senha: link + código por e-mail; depois de entrar, cria a senha
+  // Primeiro acesso / esqueci a senha: link mágico por e-mail; ao entrar, o popup obriga a criar a senha
   async function enviarLink() {
     const campo = $('#login-email');
     const email = campo.value.trim().toLowerCase();
@@ -195,54 +195,40 @@
     msg.textContent = 'Enviando…';
     const { error } = await sb.auth.signInWithOtp({
       email,
-      // não cria conta: só quem já foi cadastrado como adm recebe o código
+      // não cria conta: só quem já foi cadastrado como adm recebe o link
       options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: false },
     });
     btn.disabled = false;
     if (error) {
-      const limite = error.status === 429 || /rate limit|security purposes/i.test(error.message);
       msg.classList.add('erro');
-      msg.textContent = limite
-        ? 'Muitos pedidos em pouco tempo. Espere alguns minutos. Se já recebeu um código, digite abaixo.'
+      msg.textContent = error.status === 429 || /rate limit|security purposes/i.test(error.message)
+        ? 'Muitos pedidos em pouco tempo. Espere alguns minutos e tente de novo.'
         : 'Não foi possível enviar: ' + error.message;
-      if (limite) $('#form-codigo').hidden = false;
       return;
     }
-    msg.textContent = `Pronto! Digite aqui o código enviado para ${email} (ou abra o link neste navegador). Se não aparecer, olhe o spam.`;
-    $('#form-codigo').hidden = false;
-    $('#login-codigo').focus();
+    msg.textContent = `Pronto! Abra o link enviado para ${email}. Ao entrar, você vai criar sua senha. Se não aparecer, olhe o spam.`;
   }
 
-  // Código do e-mail: entra nesta aba mesmo se o link abrir em outro navegador/app
-  async function entrarComCodigo(ev) {
-    ev.preventDefault();
-    const email = $('#login-email').value.trim().toLowerCase();
-    const token = $('#login-codigo').value.replace(/\D/g, '');
-    const msg = $('#login-msg');
-    const btn = $('#form-codigo button');
-    btn.disabled = true;
-    msg.classList.remove('erro');
-    msg.textContent = 'Entrando…';
-    const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
-    btn.disabled = false;
-    if (error) {
-      msg.classList.add('erro');
-      msg.textContent = 'Código inválido ou expirado. Confira ou peça um novo.';
-      return;
-    }
-    st.pedirSenha = true;
-    $('#form-codigo').hidden = true;
-    $('#login-codigo').value = '';
-    msg.textContent = '';
-  }
-
-  function abrirSenha(boasVindas = false) {
-    $('#senha-titulo').textContent = boasVindas
-      ? 'Crie uma senha para entrar direto da próxima vez, sem esperar e-mail.'
-      : 'Criar ou trocar sua senha';
+  let senhaObrigatoria = false;
+  function abrirSenha(obrigatoria = false) {
+    senhaObrigatoria = obrigatoria;
+    $('#senha-kicker').textContent = obrigatoria ? 'Primeiro acesso' : 'Sua conta';
+    $('#senha-titulo').textContent = obrigatoria ? 'Crie sua senha' : 'Trocar senha';
+    $('#senha-desc').textContent = obrigatoria
+      ? 'Antes de continuar, crie uma senha. Das próximas vezes você entra direto com e-mail e senha, sem esperar e-mail.'
+      : 'Digite a nova senha duas vezes.';
+    $('#btn-senha-fechar').hidden = obrigatoria;
+    $('#btn-senha-sair').hidden = !obrigatoria;
+    $('#form-senha').reset();
     $('#senha-msg').textContent = '';
-    $('#form-senha').hidden = false;
+    $('#modal-senha').hidden = false;
     $('#nova-senha').focus();
+  }
+
+  function fecharSenha() {
+    senhaObrigatoria = false;
+    $('#form-senha').reset();
+    $('#modal-senha').hidden = true;
   }
 
   async function salvarSenha(ev) {
@@ -254,7 +240,8 @@
     if (senha !== $('#nova-senha-2').value) return (msg.textContent = 'As duas senhas não são iguais.');
     const btn = $('#form-senha button[type=submit]');
     btn.disabled = true;
-    const { error } = await sb.auth.updateUser({ password: senha });
+    // senha_criada marca na conta que o popup obrigatório não precisa mais aparecer
+    const { data, error } = await sb.auth.updateUser({ password: senha, data: { senha_criada: true } });
     btn.disabled = false;
     if (error) {
       msg.textContent = /different from the old/i.test(error.message)
@@ -262,8 +249,8 @@
         : 'Não foi possível salvar: ' + error.message;
       return;
     }
-    $('#form-senha').reset();
-    $('#form-senha').hidden = true;
+    if (data?.user) st.usuario = data.user;
+    fecharSenha();
     toast('Senha salva. Da próxima vez entre com e-mail e senha.');
   }
 
@@ -622,10 +609,11 @@
   function ligarEventos() {
     $('#form-login').addEventListener('submit', entrarComSenha);
     $('#btn-link').addEventListener('click', enviarLink);
-    $('#form-codigo').addEventListener('submit', entrarComCodigo);
     $('#form-senha').addEventListener('submit', salvarSenha);
     $('#btn-senha').addEventListener('click', () => abrirSenha());
-    $('#btn-senha-fechar').addEventListener('click', () => { $('#form-senha').reset(); $('#form-senha').hidden = true; });
+    $('#btn-senha-fechar').addEventListener('click', fecharSenha);
+    $('#btn-senha-sair').addEventListener('click', async () => { fecharSenha(); await sb.auth.signOut(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal-senha').hidden && !senhaObrigatoria) fecharSenha(); });
     $('#btn-sair').addEventListener('click', async () => {
       if (!confirmarDescarte()) return;
       marcarSujo(false);
