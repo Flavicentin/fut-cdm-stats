@@ -345,7 +345,16 @@ const Charts = (() => {
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   /* Barras empilhadas de gols + assistências por mês (perfil) */
-  function opBarrasMes({ meses, gols, assist }) {
+  function opBarrasMes({ meses, gols, assist, mediaJogador, mediaGrupo }) {
+    // Linhas de média: horizontais, tracejadas, com o valor na ponta direita
+    const media = (nome, valor, cor, tipo) => ({
+      name: nome, type: 'line', data: meses.map(() => +valor.toFixed(1)), z: 5,
+      symbol: 'none', silent: true,
+      lineStyle: { color: cor, width: 2, type: tipo },
+      itemStyle: { color: cor },
+      endLabel: { show: true, formatter: p => dec(p.value), color: cor, fontWeight: 800, fontSize: 12, distance: 6 },
+      tooltip: { show: false },
+    });
     const seg = (nome, dados, cor, topo) => ({
       name: nome, type: 'bar', stack: 'm', barMaxWidth: 26, data: dados,
       itemStyle: { color: cor, borderColor: tok('surface'), borderWidth: 1, borderRadius: topo ? [4, 4, 0, 0] : 0 },
@@ -353,12 +362,24 @@ const Charts = (() => {
     });
     return {
       ...base(),
-      legend: { top: 0, right: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: tok('texto-2'), fontWeight: 600, fontSize: 12 } },
-      grid: { left: 4, right: 4, top: 34, bottom: 4, containLabel: true },
-      tooltip: { ...base().tooltip, trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: tok('acento-suave') } } },
+      legend: { top: 0, right: 0, itemWidth: 16, itemHeight: 10, textStyle: { color: tok('texto-2'), fontWeight: 600, fontSize: 12 } },
+      grid: { left: 4, right: 40, top: 34, bottom: 4, containLabel: true },
+      tooltip: {
+        ...base().tooltip, trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: tok('acento-suave') } },
+        formatter: ps => {
+          const i = ps[0].dataIndex, ga = gols[i] + assist[i];
+          return `<b>${meses[i]}</b><br>${ps.filter(p => p.seriesType === 'bar').map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>')}`
+            + `<br>G+A: <b>${ga}</b>${ga ? ` · ${ga >= mediaJogador ? 'acima' : 'abaixo'} da média dele (${dec(mediaJogador)})` : ''}`
+            + `<br><span style="opacity:.7">Média do Fut CDM: ${dec(mediaGrupo)}</span>`;
+        },
+      },
       xAxis: { type: 'category', data: meses, axisTick: { show: false }, axisLine: { lineStyle: { color: tok('borda-forte') } }, axisLabel: { color: tok('texto-2'), fontSize: 11 } },
       yAxis: { type: 'value', axisLabel: { color: tok('texto-3'), fontSize: 11 }, splitLine: { lineStyle: { color: tok('borda'), type: [3, 4] } } },
-      series: [seg('Gols', gols, tok('s-gols'), false), seg('Assistências', assist, tok('s-assist'), true)],
+      series: [
+        seg('Gols', gols, tok('s-gols'), false), seg('Assistências', assist, tok('s-assist'), true),
+        ...(mediaJogador ? [media('Média do jogador', mediaJogador, tok('ouro'), [6, 4])] : []),
+        ...(mediaGrupo ? [media('Média do Fut CDM', mediaGrupo, tok('texto-2'), [2, 4])] : []),
+      ],
     };
   }
 

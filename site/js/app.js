@@ -459,8 +459,8 @@
         ${state.meses.length && j.porMes.some(i => i.gols + i.assist) ? `
         <article class="painel painel-largo">
           <h3>Mês a mês</h3>
-          <p class="painel-desc">Gols e assistências em cada mês da temporada.</p>
-          <div class="grafico" id="g-meses-perfil" style="height:240px"></div>
+          <p class="painel-desc">Gols e assistências em cada mês. As linhas tracejadas são a média de G+A por mês do jogador e a do Fut CDM, contando só os meses em que cada um entrou em campo.</p>
+          <div class="grafico" id="g-meses-perfil" style="height:260px"></div>
         </article>` : ''}
         ${j.over ? `
         <article class="painel painel-largo painel-adms">
@@ -484,12 +484,19 @@
     ], ATRIBUTOS);
     if ($('#g-meses-perfil')) Charts.barrasMes($('#g-meses-perfil'), {
       meses: state.meses.map(m => curtoMes(m.mes)), gols: j.porMes.map(i => i.gols), assist: j.porMes.map(i => i.assist),
+      mediaJogador: mediaMensal([j]), mediaGrupo: mediaMensal(state.comJogos),
     });
     if (j.over) Charts.radar($('#g-notas-perfil'), [
       { nome: j.nome, valores: NOTAS.map(([, , k]) => j.over[k]), cor: 'acento' },
       { nome: 'Média do grupo', valores: NOTAS.map(([, , k]) => Math.round(state.mediaNotas[k])), cor: 'neutro' },
     ], NOTAS, true, { min: 70, max: 95 });
     $('.modal-fechar').focus();
+  }
+
+  // Média de G+A por mês, só nos meses em que o jogador participou (G+A > 0)
+  function mediaMensal(lista) {
+    const vals = lista.flatMap(j => j.porMes.map(i => i.gols + i.assist).filter(v => v > 0));
+    return vals.length ? vals.reduce((t, v) => t + v, 0) / vals.length : 0;
   }
 
   function fecharPerfil() {
