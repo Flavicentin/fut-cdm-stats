@@ -92,6 +92,9 @@
     mes: null,
     metricaCorrida: 'gols',
     focoCorrida: null,
+    histModo: 'pos',
+    histMet: 'ga',
+    histSel: [],
     a: null,
     b: null,
     modo: 'numeros',
@@ -348,6 +351,40 @@
     info.innerHTML = r
       ? `<span class="ponto"></span><b>${esc(j.nome)}</b> · ${r.valor} ${unid} · <b>${r.pos}º</b> na corrida de ${unid}`
       : `<span class="ponto"></span><b>${esc(j.nome)}</b> ainda não tem ${unid} nos meses registrados`;
+  }
+
+  // Histórico de classificação: ranking denso de cada mês, contando só aquele mês
+  const MAX_HIST = 4;
+  function renderHistorico() {
+    const k = state.histMet;
+    const val = i => k === 'ga' ? i.gols + i.assist : i[k];
+    const unidade = { gols: 'gols', assist: 'assist.', ga: 'G+A' }[k];
+    // posição de cada id em cada mês (convidados contam na classificação do mês)
+    const posMes = state.meses.map(m => {
+      const rs = topPor(m.jogadores.map(i => ({ id: i.id, nome: i.nome || '', i })), x => val(x.i));
+      return Object.fromEntries(rs.map(r => [r.j.id, r.pos]));
+    });
+    const series = state.comJogos.filter(j => j.porMes.some(i => val(i) > 0)).map(j => ({
+      id: j.id, nome: j.nome,
+      brutos: j.porMes.map(val),
+      posicoes: posMes.map(p => p[j.id] || 0),
+    }));
+    // Visão geral: sem ninguém escolhido, os 3 melhores da temporada ficam em destaque
+    const geral = !state.histSel.length;
+    const destaques = geral
+      ? [...series].sort((a, b) => b.brutos.reduce((t, v) => t + v, 0) - a.brutos.reduce((t, v) => t + v, 0)).slice(0, 3).map(s => s.id)
+      : state.histSel;
+    Charts.historico($('#g-historico'), { meses: state.meses.map(m => curtoMes(m.mes)), series, destaques, modo: state.histModo, unidade });
+
+    $('#hist-chips').innerHTML = state.histSel.map((id, n) => {
+      const e = Charts.ESTILOS[n];
+      return `<span class="chip" style="--c:var(--${e.cor})"><i class="${Array.isArray(e.tipo) ? 'tracejado' : ''}"></i>${esc(state.porId[id].nome)}<button type="button" data-tirar="${id}" aria-label="Tirar ${esc(state.porId[id].nome)}">×</button></span>`;
+    }).join('');
+    const cheio = state.histSel.length >= MAX_HIST;
+    const input = $('#busca-hist input');
+    input.disabled = cheio;
+    input.placeholder = cheio ? `Máximo de ${MAX_HIST} jogadores` : state.histSel.length ? '＋ Comparar com mais alguém' : '＋ Escolha você (ou quem quiser)';
+    $('#hist-dica').textContent = geral ? 'Visão geral: os 3 com mais ' + unidade + ' na temporada em destaque. Passe o mouse para ver o resto.' : '';
   }
 
   function renderHeatMeses() {
@@ -712,6 +749,18 @@
     $('#limpar-corrida').addEventListener('click', () => {
       state.focoCorrida = null; $('#busca-corrida input').value = ''; renderCorrida();
     });
+    grupo('#seg-hist-modo', 'hm', v => { state.histModo = v; renderHistorico(); });
+    grupo('#seg-hist-met', 'hmet', v => { state.histMet = v; renderHistorico(); });
+    autocomplete($('#busca-hist'), (id, input) => {
+      if (!state.histSel.includes(id) && state.histSel.length < MAX_HIST) state.histSel.push(id);
+      input.value = ''; input.blur(); renderHistorico();
+    });
+    $('#hist-chips').addEventListener('click', e => {
+      const b = e.target.closest('[data-tirar]');
+      if (!b) return;
+      state.histSel = state.histSel.filter(id => id !== b.dataset.tirar);
+      renderHistorico();
+    });
     autocomplete($('.sel-a .busca'), id => definirDuelo(id, null));
     autocomplete($('.sel-b .busca'), id => definirDuelo(null, id));
     $('#btn-inverter').addEventListener('click', () => {
@@ -750,7 +799,7 @@
     renderHonras();
     renderGlossario();
     renderMeses();
-    if (state.meses.length) { renderCorrida(); renderHeatMeses(); }
+    if (state.meses.length) { renderCorrida(); renderHistorico(); renderHeatMeses(); }
     Charts.iniciar(state.jogadores, MIN_JOGOS);
     const top = [...state.regulares].sort((x, y) => y.calc - x.calc);
     state.a = top[0].id; state.b = top[1].id;

@@ -145,6 +145,30 @@
             <div class="grafico" id="g-corrida" style="height:460px"></div>
           </article>
           <article class="painel painel-largo">
+            <h3>Histórico de classificação</h3>
+            <p class="painel-desc">Cada mês conta sozinho: a posição de cada um só com os números daquele mês. Escolha até 4 jogadores para comparar.</p>
+            <div class="corrida-ctrl">
+              <div class="seg seg-pequeno" id="seg-hist-modo" role="group" aria-label="Visualização">
+                <button data-hm="pos" class="ativo">Posição no mês</button>
+                <button data-hm="valor">Total no mês</button>
+              </div>
+              <div class="seg seg-pequeno" id="seg-hist-met" role="group" aria-label="Métrica">
+                <button data-hmet="gols">Gols</button>
+                <button data-hmet="assist">Assist.</button>
+                <button data-hmet="ga" class="ativo">G+A</button>
+              </div>
+            </div>
+            <div class="hist-sel">
+              <div id="hist-chips" class="hist-sel"></div>
+              <div class="busca busca-hist" id="busca-hist">
+                <input type="search" placeholder="＋ Adicionar jogador" aria-label="Adicionar jogador ao histórico" autocomplete="off">
+                <ul class="sugestoes" role="listbox"></ul>
+              </div>
+              <span class="hist-dica" id="hist-dica"></span>
+            </div>
+            <div class="grafico" id="g-historico" style="height:440px"></div>
+          </article>
+          <article class="painel painel-largo">
             <h3>Mapa de calor da temporada</h3>
             <p class="painel-desc">G+A de cada jogador em cada mês. Dá pra ver quem é constante e quem teve um mês fora da curva.</p>
             <div class="grafico" id="g-heat-meses"></div>

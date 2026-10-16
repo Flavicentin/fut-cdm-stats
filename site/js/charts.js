@@ -295,6 +295,55 @@ const Charts = (() => {
     };
   }
 
+  /* Histórico de classificação: posição (ou total) de cada mês isolado.
+     Os escolhidos ganham cor, forma do ponto e nome na ponta; o resto fica em cinza. */
+  const ESTILOS = [
+    { cor: 's-a', simbolo: 'circle', tipo: 'solid' },
+    { cor: 's-b', simbolo: 'rect', tipo: 'solid' },
+    { cor: 's-c', simbolo: 'triangle', tipo: 'solid' },
+    { cor: 'texto', simbolo: 'diamond', tipo: [6, 4] },
+  ];
+  function opHistorico({ meses, series, destaques, modo, unidade }) {
+    const pos = modo === 'pos';
+    const maxPos = Math.max(1, ...series.flatMap(s => s.posicoes.filter(Boolean)));
+    const fmt = (s, i) => s.brutos[i] ? `${s.posicoes[i]}º · ${s.brutos[i]} ${unidade}` : 'não pontuou';
+    return {
+      ...base(),
+      grid: { left: 8, right: estreito() ? 80 : 110, top: 16, bottom: 8, containLabel: true },
+      tooltip: {
+        ...base().tooltip, trigger: 'axis',
+        formatter: ps => {
+          const i = ps[0].dataIndex;
+          const lista = destaques.length ? series.filter(s => destaques.includes(s.id))
+            : series.filter(s => s.posicoes[i]).sort((a, b) => a.posicoes[i] - b.posicoes[i]).slice(0, 8);
+          return `<b>${meses[i]}</b><br>` + lista.map(s => `${esc(s.nome)}: <b>${fmt(s, i)}</b>`).join('<br>');
+        },
+      },
+      xAxis: { ...eixo(''), type: 'category', boundaryGap: false, data: meses, splitLine: { show: false } },
+      yAxis: pos
+        // marcas em 1º, 5º, 10º, 15º… (o 0 do eixo vira o rótulo do 1º lugar)
+        ? { ...eixo(''), type: 'value', inverse: true, min: 0, max: Math.ceil(maxPos / 5) * 5, interval: 5, axisLabel: { color: tok('texto-3'), fontSize: 11, formatter: v => `${v || 1}º` } }
+        : { ...eixo(''), type: 'value', min: 0 },
+      series: series.map(s => {
+        const k = destaques.indexOf(s.id), est = ESTILOS[k], d = k >= 0;
+        const cor = d ? tok(est.cor) : tok('borda-forte');
+        return {
+          name: s.nome, type: 'line', id: s.id, connectNulls: false,
+          data: pos ? s.posicoes.map(v => v || null) : s.brutos,
+          symbol: d ? est.simbolo : 'circle', symbolSize: d ? 9 : 3, showSymbol: d,
+          z: d ? 5 : 1, silent: !d && destaques.length > 0,
+          lineStyle: { width: d ? 3 : 1, color: cor, type: d ? est.tipo : 'solid', opacity: d || !destaques.length ? 1 : .55 },
+          itemStyle: { color: cor, borderColor: tok('surface'), borderWidth: 2 },
+          emphasis: { focus: 'series', lineStyle: { width: d ? 3.5 : 2.5 } },
+          blur: { lineStyle: { opacity: .2 } },
+          endLabel: d ? { show: true, formatter: p => `${s.nome}  ${pos ? (p.value ? p.value + 'º' : '—') : p.value}`, color: cor, fontWeight: 800, fontSize: 12 } : undefined,
+          labelLayout: { moveOverlap: 'shiftY' },
+        };
+      }),
+    };
+  }
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
   /* Barras empilhadas de gols + assistências por mês (perfil) */
   function opBarrasMes({ meses, gols, assist }) {
     const seg = (nome, dados, cor, topo) => ({
@@ -335,6 +384,8 @@ const Charts = (() => {
     radar(el, series, atributos, legenda = true, escala) { montar(el, () => opRadar(series, atributos, legenda, escala)); },
     heatmap(el, cfg) { el.style.height = `${cfg.linhas.length * 30 + 50}px`; montar(el, () => opHeatmap(cfg)); },
     corrida(el, cfg) { montar(el, () => opCorrida(cfg)); },
+    historico(el, cfg) { montar(el, () => opHistorico(cfg)); },
+    ESTILOS,
     barrasMes(el, cfg) { montar(el, () => opBarrasMes(cfg)); },
     descartar(id) { if (registro[id]) { registro[id].chart.dispose(); delete registro[id]; } },
     retematizar() {

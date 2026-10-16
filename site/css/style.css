@@ -20,6 +20,7 @@
   --s-assist: #2a78d6;
   --s-a: #2a78d6;
   --s-b: #eb6834;
+  --s-c: #1baf7a;
   --sombra: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
   --campo-linha: rgba(18, 120, 60, .10);
   --hero-grad: radial-gradient(120% 80% at 50% 0%, #dff3e5 0%, var(--bg) 60%);
@@ -49,6 +50,8 @@
     --s-assist: #3987e5;
     --s-a: #3987e5;
     --s-b: #e8693a;
+  --s-c: #199e70;
+    --s-c: #199e70;
     --sombra: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.35);
     --campo-linha: rgba(59, 226, 127, .07);
     --hero-grad: radial-gradient(120% 80% at 50% 0%, #0f2a19 0%, var(--bg) 62%);
@@ -75,6 +78,7 @@
   --s-assist: #3987e5;
   --s-a: #3987e5;
   --s-b: #e8693a;
+  --s-c: #199e70;
   --sombra: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.35);
   --campo-linha: rgba(59, 226, 127, .07);
   --hero-grad: radial-gradient(120% 80% at 50% 0%, #0f2a19 0%, var(--bg) 62%);
@@ -492,3 +496,18 @@ body.travado { overflow: hidden; }
 }
 .corrida-info[hidden] { display: none; }
 .corrida-info .ponto { width: 10px; height: 10px; border-radius: 50%; background: var(--ouro); }
+
+/* Histórico de classificação: jogadores escolhidos para comparar */
+.hist-sel { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 10px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--borda-forte); font-size: 13px; font-weight: 700;
+}
+.chip i { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
+.chip i.tracejado { background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px); }
+.chip button { width: 22px; height: 22px; border: 0; border-radius: 50%; background: none; color: var(--texto-3); font-size: 16px; line-height: 1; }
+.chip button:hover { background: var(--surface); color: var(--texto); }
+.busca-hist { flex: 1; min-width: 200px; max-width: 320px; }
+.busca-hist input { padding-top: 6px; padding-bottom: 6px; font-size: 14px; }
+.busca-hist input:disabled { opacity: .5; }
+.hist-dica { font-size: 12px; color: var(--texto-3); width: 100%; }
