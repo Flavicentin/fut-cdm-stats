@@ -104,7 +104,8 @@
 
   /* ---------------- Dados ---------------- */
   async function carregar() {
-    const dados = await Db.carregarTemporada();
+    // ?temporada=2025 abre uma temporada específica (sem o parâmetro: a mais recente)
+    const dados = await Db.carregarTemporada(new URLSearchParams(location.search).get('temporada') || undefined);
     state.temporada = dados.temporada;
     state.atualizado = dados.atualizado_em;
     state.jogadores = dados.jogadores.map(j => {
