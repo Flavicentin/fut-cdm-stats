@@ -580,6 +580,15 @@
     const rows = ok(await sb.from('alteracoes')
       .select('id,temporada_id,aba,mes,resumo,status,criado_por,autor,criado_em,revisor,revisado_em,motivo')
       .order('criado_em', { ascending: false }).limit(40));
+    // resumo vazio/incompleto (ex.: revisão criada por script de teste) não pode travar a tela
+    const ABA_NOME = { temporada: 'Totais da temporada', mes: 'Mês', honrarias: 'Honrarias', over: 'Notas dos adms' };
+    for (const r of rows) {
+      const itens = Array.isArray(r.resumo?.itens) ? r.resumo.itens : [];
+      r.resumo = {
+        titulo: r.resumo?.titulo || `${ABA_NOME[r.aba] || r.aba} ${r.mes ? nomeMes(r.mes.slice(0, 7)) : r.temporada_id}`,
+        itens: itens.map(i => ({ ...i, nome: i.nome || i.id || '?', mudancas: Array.isArray(i.mudancas) ? i.mudancas : [] })),
+      };
+    }
     st.revisoes = Object.fromEntries(rows.map(r => [r.id, r]));
     const quando = d => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     const pendentes = rows.filter(r => r.status === 'pendente');
@@ -592,7 +601,7 @@
           <header><b>${esc(r.resumo.titulo)}</b> <small>enviado por ${esc(r.autor || '?')} · ${quando(r.criado_em)}</small></header>
           <ul>${r.resumo.itens.map(i => `
             <li><b>${esc(i.nome)}</b>${i.estado === 'entrou' ? ` <span class="adm-tag">${i.cadastroNovo ? 'jogador novo' : 'entrou'}</span>` : ''}${i.estado === 'saiu' ? ' <span class="adm-tag adm-tag-saiu">saiu</span>' : ''}
-              ${i.mudancas.length ? `<span class="adm-rev-mud">${i.mudancas.map(m => esc(textoMudanca(m))).join(' · ')}</span>` : ''}</li>`).join('')}
+              ${i.mudancas.length ? `<span class="adm-rev-mud">${i.mudancas.map(m => esc(textoMudanca(m))).join(' · ')}</span>` : ''}</li>`).join('') || '<li class="pt-vazio">Sem detalhes do que mudou.</li>'}
           </ul>
           <div class="adm-barra">
             ${meu
