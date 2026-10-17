@@ -76,6 +76,7 @@
           </div>
         </header>
         <div class="abas" id="abas" role="tablist">
+          <button class="aba" data-aba="partidas">⚽ Partidas</button>
           <button class="aba ativa" data-aba="temporada">📊 Temporada</button>
           <button class="aba" data-aba="mes">📅 Mês</button>
           <button class="aba" data-aba="honrarias">🏆 Honrarias</button>
@@ -111,9 +112,9 @@
   <!-- RELATÓRIO PARA O WHATSAPP -->
   <div class="adm-modal" id="modal-relatorio" hidden>
     <div class="adm-modal-caixa adm-modal-largo" role="dialog" aria-modal="true" aria-labelledby="relatorio-titulo">
-      <p class="kicker">Alteração aprovada</p>
+      <p class="kicker" id="relatorio-kicker">Alteração aprovada</p>
       <h2 class="adm-titulo adm-modal-titulo" id="relatorio-titulo">Relatório para o grupo</h2>
-      <p class="painel-desc">O que mudou para cada pessoa. Copie e cole no grupo, ou abra direto no WhatsApp.</p>
+      <p class="painel-desc" id="relatorio-desc">O que mudou para cada pessoa. Copie e cole no grupo, ou abra direto no WhatsApp.</p>
       <textarea id="relatorio-texto" readonly rows="12" aria-label="Relatório"></textarea>
       <div class="adm-form">
         <button class="btn btn-primario" type="button" id="btn-rel-copiar">Copiar</button>

@@ -63,6 +63,7 @@
     if (/convites_admin_pkey/.test(m)) return 'Esse e-mail já está na lista de convites.';
     if (/notas_over_\w+_check/.test(m)) return 'As notas vão de 1 a 99 (deixe em branco quem não tem nota).';
     if (/alteracoes_uma_pendente/.test(m)) return 'Já existe uma alteração desta aba esperando revisão. Aprove ou cancele em Revisões antes.';
+    if (/partida/i.test(m) && /does not exist|Could not find the (table|function)/i.test(m)) return 'A aba Partidas ainda não foi instalada no banco (falta rodar a migração 20261017_partidas).';
     if (/relation .*alteracoes.* does not exist|Could not find the table/i.test(m)) return 'A revisão de alterações ainda não foi instalada no banco (rode a migração revisao_de_alteracoes).';
     if (/row-level security|permission denied|42501/.test(m)) return 'Sem permissão. Sua conta precisa ser admin (ou a sessão expirou: saia e entre de novo).';
     return m;
@@ -452,6 +453,7 @@
     st.avisos = [];
     $$('#abas .aba').forEach(b => b.classList.toggle('ativa', b.dataset.aba === aba));
     const conteudo = $('#conteudo');
+    clearInterval(st.pollPartida);
     if (!st.temporada && aba !== 'admins' && aba !== 'revisoes') {
       conteudo.innerHTML = '<p class="adm-vazio">Nenhuma temporada cadastrada. Crie uma acima.</p>';
       return;
@@ -460,6 +462,7 @@
     try {
       if (aba === 'admins') return await renderAdmins();
       if (aba === 'revisoes') return await renderRevisoes();
+      if (aba === 'partidas') return await renderPartidas();
       await carregarElenco();
       st.linhas = (await ABAS[aba].carregar()).sort(porNome);
       // foto do que está gravado, para montar o resumo da alteração
@@ -519,24 +522,33 @@
 
   // Texto para o grupo do WhatsApp (negrito com *)
   function relatorio(alt) {
-    const curto = (m, n) => (m.tipo === 'honra' ? m.r
-      : { Gols: Math.abs(n) === 1 ? 'gol' : 'gols', Assist: 'assist.', Jogos: Math.abs(n) === 1 ? 'jogo' : 'jogos' }[m.r] || m.r);
+    // sem emojis (veja relatorioPartida): honraria vira só o nome
+    const curto = (m, n) => (m.tipo === 'honra' ? m.r.replace(/^\S+\s/, '')
+      : { Gols: Math.abs(n) === 1 ? 'gol' : 'gols', Assist: Math.abs(n) === 1 ? 'assistência' : 'assistências', Jogos: Math.abs(n) === 1 ? 'jogo' : 'jogos' }[m.r] || m.r);
     const linhas = alt.resumo.itens.map(i => {
       if (i.estado === 'saiu') return `*${i.nome}*: saiu da lista`;
       const partes = i.mudancas.map(m => (m.tipo === 'nota'
-        ? `${m.r} ${m.de ?? '—'}→${m.para ?? '—'}`
+        ? `${m.r} de ${m.de ?? '-'} para ${m.para ?? '-'}`
         : `${sinal(m.para - m.de)} ${curto(m, m.para - m.de)}`));
-      return `*${i.nome}*${i.estado === 'entrou' ? ' (novo na lista)' : ''}: ${partes.join(' · ')}`;
+      return `- ${i.nome}${i.estado === 'entrou' ? ' (novo na lista)' : ''}: ${partes.join(', ')}`;
     });
-    return [`⚽ *FUT CDM · ${alt.resumo.titulo}*`, 'Atualização revisada e aprovada ✅', '', ...linhas, '', `📊 ${location.origin}/`].join('\n');
+    return [`*FUT CDM - ${alt.resumo.titulo}*`, 'Atualização revisada e aprovada.', '', ...linhas].join('\n');
   }
 
-  function abrirRelatorio(alt) {
-    const texto = relatorio(alt);
+  function abrirTexto(texto, { kicker, titulo, desc }) {
+    $('#relatorio-kicker').textContent = kicker;
+    $('#relatorio-titulo').textContent = titulo;
+    $('#relatorio-desc').textContent = desc;
     $('#relatorio-texto').value = texto;
-    $('#btn-rel-whats').href = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    // link direto: o redirecionamento do wa.me troca emojis por "�"
+    $('#btn-rel-whats').href = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
     $('#modal-relatorio').hidden = false;
   }
+
+  const abrirRelatorio = alt => abrirTexto(relatorio(alt), {
+    kicker: 'Alteração aprovada', titulo: 'Relatório para o grupo',
+    desc: 'O que mudou para cada pessoa. Copie e cole no grupo, ou abra direto no WhatsApp.',
+  });
 
   async function enviarRevisao() {
     const resumo = montarResumo();
@@ -612,6 +624,255 @@
       depois?.();
     } catch (e) {
       toast('Erro: ' + erroLegivel(e));
+    }
+  }
+
+  /* ---------------- Partidas ---------------- */
+  const hoje = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const dataBR = d => d.split('-').reverse().join('/');
+  const golsTxt = n => `${n} ${n === 1 ? 'gol' : 'gols'}`;
+  const NOMES_TIMES = ['Time 1', 'Time 2', 'Time 3', 'Time 4'];
+
+  async function renderPartidas() {
+    clearInterval(st.pollPartida);
+    if (st.novaPartida) return renderNovaPartida();
+    if (st.partidaId) return renderPartidaAoVivo();
+    const rows = ok(await sb.from('partidas').select('id,data,times_nomes,status,autor,resumo')
+      .eq('temporada_id', st.temporada).order('data', { ascending: false }).limit(40));
+    st.partidasLista = Object.fromEntries(rows.map(p => [p.id, p]));
+    const abertas = rows.filter(p => p.status === 'aberta');
+    const encerradas = rows.filter(p => p.status === 'encerrada');
+    const placar = p => p.resumo.times.map(t => `${esc(t.nome)} ${t.gols}`).join(' · ');
+    $('#conteudo').innerHTML = `
+      <p class="painel-desc">Anote os gols e assistências durante o fut. Ao encerrar, os números entram no mês da partida e nos totais da temporada (+1 jogo para quem jogou), e sai o relatório para o grupo.</p>
+      <div class="adm-barra"><button class="btn btn-primario" id="btn-nova-partida">＋ Nova partida</button></div>
+      ${abertas.length ? `<h2 class="adm-sub">Em andamento</h2>
+      <ul class="adm-lista">${abertas.map(p => `
+        <li><span class="grow"><b>Partida de ${dataBR(p.data)}</b> <small style="color:var(--texto-3)">criada por ${esc(p.autor || '?')}</small></span>
+          <button class="btn btn-primario" data-abrir-partida="${p.id}">Continuar</button></li>`).join('')}</ul>` : ''}
+      <h2 class="adm-sub">Encerradas</h2>
+      <ul class="adm-lista">${encerradas.map(p => `
+        <li><span class="grow"><b>Partida de ${dataBR(p.data)}</b> <small style="color:var(--texto-3)">${placar(p)}</small></span>
+          <button class="btn" data-relatorio-partida="${p.id}">Relatório</button></li>`).join('') || '<li>Nenhuma partida encerrada ainda.</li>'}</ul>`;
+  }
+
+  /* Montar os 4 times */
+  // Toque no time para escolher onde adicionar; toque no nome para colocar nele
+  function renderNovaPartida() {
+    const np = st.novaPartida;
+    const nomeDe = id => np.nomesNovos[id] || st.porId[id]?.nome || id;
+    $('#conteudo').innerHTML = `
+      <div class="adm-barra">
+        <button class="btn" id="btn-voltar-partidas">← Voltar</button>
+        <h2 class="adm-sub" style="margin:0">Nova partida</h2>
+        <label class="adm-data">Data <input type="date" id="np-data" value="${np.data}"></label>
+      </div>
+      <p class="painel-desc">Toque no time e depois nos jogadores que vão jogar nele.</p>
+      <div class="pt-times pt-montagem">
+        ${np.times.map((ids, t) => `
+          <section class="pt-time pt-cor-${t} ${np.ativo === t ? 'pt-ativo' : ''}" data-np-time="${t}" role="button" tabindex="0" aria-pressed="${np.ativo === t}">
+            <header class="pt-cab"><b>${NOMES_TIMES[t]}</b><span class="pt-qtd">${np.ativo === t ? '✓ selecionado' : `${ids.length} ${ids.length === 1 ? 'jogador' : 'jogadores'}`}</span></header>
+            <ul class="pt-chips">${ids.map(id => `<li>${esc(nomeDe(id))}<button data-np-tirar="${t}:${esc(id)}" aria-label="Tirar ${esc(nomeDe(id))}">×</button></li>`).join('') || '<li class="pt-vazio">Ninguém ainda</li>'}</ul>
+          </section>`).join('')}
+      </div>
+      <section class="pt-pool">
+        <header class="pt-pool-cab">
+          <b>Jogadores</b>
+          <span class="pt-qtd">tocar coloca no <b class="pt-cor-${np.ativo}" style="color:var(--cor-time)">${NOMES_TIMES[np.ativo]}</b></span>
+        </header>
+        <input type="search" id="np-busca" placeholder="Buscar ou digitar nome novo" autocomplete="off" value="${esc(np.busca)}">
+        <div id="np-lista"></div>
+      </section>
+      <div class="adm-barra"><span class="espaco"></span><button class="btn btn-primario" id="btn-comecar-partida">Começar partida (${np.times.flat().length})</button></div>`;
+    renderListaNP();
+  }
+
+  function renderListaNP() {
+    const np = st.novaPartida;
+    const usados = new Set(np.times.flat());
+    const busca = slug(np.busca);
+    const bate = j => !busca || slug(j.nome).includes(busca) || Object.entries(st.apelidos).some(([a, id]) => id === j.id && a.includes(busca));
+    const livres = st.jogadores.filter(j => !usados.has(j.id) && bate(j));
+    const elenco = livres.filter(j => st.elenco.has(j.id));
+    const outros = livres.filter(j => !st.elenco.has(j.id));
+    const botoes = lista => lista.map(j => `<button class="pt-pick" data-np-pick="${esc(j.id)}">${esc(j.nome)}</button>`).join('');
+    const nomeBusca = limpar(np.busca);
+    const novo = nomeBusca && !resolver(nomeBusca) && slug(nomeBusca) && !usados.has(slug(nomeBusca));
+    $('#np-lista').innerHTML = `
+      ${novo ? `<button class="pt-pick pt-pick-novo" id="np-novo">＋ Adicionar “${esc(nomeBusca)}” como jogador novo</button>` : ''}
+      ${elenco.length ? `<p class="pt-grupo">Elenco</p><div class="pt-picks">${botoes(elenco)}</div>` : ''}
+      ${outros.length ? `<p class="pt-grupo">Convidados e outros</p><div class="pt-picks">${botoes(outros)}</div>` : ''}
+      ${!livres.length && !novo ? `<p class="pt-vazio">${busca ? 'Ninguém com esse nome.' : 'Todo mundo já está em um time.'}</p>` : ''}`;
+  }
+
+  function addJogadorNP(id, nomeNovo) {
+    const np = st.novaPartida;
+    if (nomeNovo) np.nomesNovos[id] = nomeNovo;
+    if (np.times.some(ids => ids.includes(id))) return toast('Esse jogador já está em um time.');
+    np.times[np.ativo].push(id);
+    np.busca = '';
+    renderNovaPartida();
+  }
+
+  async function comecarPartida() {
+    const np = st.novaPartida;
+    if (np.times.filter(ids => ids.length).length < 2) return toast('Coloque jogadores em pelo menos 2 times.');
+    const btn = $('#btn-comecar-partida');
+    btn.disabled = true;
+    try {
+      const novos = Object.entries(np.nomesNovos).filter(([id]) => np.times.some(ids => ids.includes(id))).map(([id, nome]) => ({ id, nome }));
+      if (novos.length) {
+        ok(await sb.from('jogadores').insert(novos));
+        definirJogadores([...st.jogadores, ...novos]);
+      }
+      const p = ok(await sb.from('partidas').insert({ temporada_id: st.temporada, data: np.data, times_nomes: NOMES_TIMES }).select('id').single());
+      ok(await sb.from('partida_jogadores').insert(np.times.flatMap((ids, t) => ids.map(jogador_id => ({ partida_id: p.id, jogador_id, time: t + 1 })))));
+      st.novaPartida = null;
+      st.partidaId = p.id;
+      toast('Partida começou! Anote os gols e assistências.');
+      await renderPartidas();
+    } catch (e) {
+      console.error(e);
+      toast('Erro ao criar: ' + erroLegivel(e));
+      btn.disabled = false;
+    }
+  }
+
+  /* Partida ao vivo */
+  async function carregarPartida() {
+    const id = st.partidaId;
+    const [p, jogs, evs] = await Promise.all([
+      sb.from('partidas').select('id,data,times_nomes,status,autor').eq('id', id).maybeSingle(),
+      sb.from('partida_jogadores').select('jogador_id,time').eq('partida_id', id),
+      sb.from('partida_eventos').select('id,jogador_id,tipo,criado_em').eq('partida_id', id).order('criado_em', { ascending: false }),
+    ]).then(rs => rs.map(ok));
+    return { p, jogs, evs };
+  }
+
+  async function renderPartidaAoVivo() {
+    const { p, jogs, evs } = await carregarPartida();
+    if (!p || p.status !== 'aberta') {
+      st.partidaId = null;
+      return renderPartidas();
+    }
+    const conta = (id, tipo) => evs.filter(e => e.jogador_id === id && e.tipo === tipo).length;
+    const timeDe = Object.fromEntries(jogs.map(j => [j.jogador_id, j.time]));
+    const nome = id => st.porId[id]?.nome || id;
+    const hora = d => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    $('#conteudo').innerHTML = `
+      <div class="adm-barra">
+        <button class="btn" id="btn-voltar-partidas">← Partidas</button>
+        <h2 class="adm-sub" style="margin:0">Partida de ${dataBR(p.data)} <span class="adm-tag">ao vivo</span></h2>
+        <span class="espaco"></span>
+        <button class="btn" id="btn-atualizar-partida">Atualizar</button>
+      </div>
+      <div class="pt-times">
+        ${p.times_nomes.map((nomeTime, i) => {
+          const ids = jogs.filter(j => j.time === i + 1).map(j => j.jogador_id).sort((a, b) => nome(a).localeCompare(nome(b), 'pt'));
+          const gols = ids.reduce((s, id) => s + conta(id, 'gol'), 0);
+          return `
+          <section class="pt-time pt-cor-${i}">
+            <header class="pt-cab"><b>${esc(nomeTime)}</b><span class="pt-placar">${gols}</span></header>
+            <ul class="pt-jogadores">${ids.map(id => `
+              <li>
+                <span class="grow">${esc(nome(id))}</span>
+                <span class="pt-num" title="Gols">⚽ ${conta(id, 'gol')}</span>
+                <span class="pt-num" title="Assistências">👟 ${conta(id, 'assist')}</span>
+                <button class="pt-mais" data-lance="gol" data-jogador="${esc(id)}" aria-label="Gol de ${esc(nome(id))}">+⚽</button>
+                <button class="pt-mais" data-lance="assist" data-jogador="${esc(id)}" aria-label="Assistência de ${esc(nome(id))}">+👟</button>
+              </li>`).join('') || '<li class="pt-vazio">Sem jogadores</li>'}
+            </ul>
+          </section>`;
+        }).join('')}
+      </div>
+      <div class="adm-barra">
+        <button class="btn btn-perigo" id="btn-cancelar-partida">Cancelar partida</button>
+        <span class="espaco"></span>
+        <button class="btn btn-primario" id="btn-encerrar-partida">Encerrar partida</button>
+      </div>
+      <h2 class="adm-sub">Lances (${evs.length})</h2>
+      <ul class="adm-lista pt-lances">${evs.map(e => `
+        <li><span class="grow">${hora(e.criado_em)} · ${e.tipo === 'gol' ? '⚽ Gol' : '👟 Assistência'} de <b>${esc(nome(e.jogador_id))}</b> <small style="color:var(--texto-3)">${esc(p.times_nomes[timeDe[e.jogador_id] - 1] || '')}</small></span>
+          <button class="btn btn-perigo" data-desfazer-lance="${e.id}">Desfazer</button></li>`).join('') || '<li>Nenhum lance ainda.</li>'}
+      </ul>`;
+    // outro adm pode estar anotando ao mesmo tempo
+    clearInterval(st.pollPartida);
+    st.pollPartida = setInterval(() => { if (st.aba === 'partidas' && st.partidaId && !document.hidden) renderPartidaAoVivo().catch(() => {}); }, 8000);
+  }
+
+  async function anotarLance(jogador_id, tipo, botao) {
+    botao.disabled = true;
+    try {
+      ok(await sb.from('partida_eventos').insert({ partida_id: st.partidaId, jogador_id, tipo }));
+      await renderPartidaAoVivo();
+    } catch (e) {
+      toast('Erro: ' + erroLegivel(e));
+      botao.disabled = false;
+    }
+  }
+
+  // Texto sem emojis: alguns caminhos (wa.me, copiar/colar no celular) trocam emoji por "�"
+  const assistTxt = n => `${n} ${n === 1 ? 'assistência' : 'assistências'}`;
+  const juntar = nomes => (nomes.length > 1 ? `${nomes.slice(0, -1).join(', ')} e ${nomes.at(-1)}` : nomes[0]);
+
+  // Honrarias calculadas ao encerrar (encerrar_partida): nome no relatório
+  const PREMIOS = [
+    ['mvp_s', 'MVP'], ['totw', 'Time da semana'], ['art_s', 'Artilheiro'], ['gar_s', 'Garçom'], ['gart_s', 'Gartilheiro'],
+    ['mc_s', 'Masterclass'], ['dd_s', 'Duplo-duplo'], ['top3g_s', 'Top 3 gols'], ['top3a_s', 'Top 3 assistências'],
+  ];
+
+  function relatorioPartida(resumo) {
+    const P = resumo.premios || {};
+    const numeros = j => [j.gols && golsTxt(j.gols), j.assist && assistTxt(j.assist)].filter(Boolean).join(', ');
+    const valor = {
+      mvp_s: numeros, totw: j => `${j.gols + j.assist} G+A`, art_s: j => golsTxt(j.gols), gar_s: j => assistTxt(j.assist),
+      gart_s: numeros, mc_s: j => `${j.gols + j.assist} participações`, dd_s: numeros,
+      top3g_s: j => golsTxt(j.gols), top3a_s: j => assistTxt(j.assist),
+    };
+    // Masterclass, Gartilheiro e Duplo-duplo só aparecem se alguém ganhou
+    const destaques = PREMIOS
+      .filter(([k]) => P[k]?.length || ['mvp_s', 'totw', 'art_s', 'gar_s'].includes(k))
+      .map(([k, nome]) => `*${nome}:* ${P[k]?.length ? juntar(P[k].map(j => `${j.nome} (${valor[k](j)})`)) : 'ninguém'}`);
+    const premiosDe = id => PREMIOS.slice(0, 7).filter(([k]) => P[k]?.some(j => j.id === id)).map(([, nome]) => nome);
+    const times = resumo.times.filter(t => t.jogadores.length);
+    return [
+      `*FUT CDM - Partida de ${resumo.data}*`,
+      '',
+      '*Placar*',
+      ...[...times].sort((a, b) => b.gols - a.gols).map(t => `${t.nome}: ${golsTxt(t.gols)}`),
+      '',
+      '*Destaques do fut*',
+      ...destaques,
+      '',
+      ...times.flatMap(t => [
+        `*${t.nome} - ${golsTxt(t.gols)}*`,
+        ...t.jogadores.map(j => {
+          const premios = premiosDe(j.id);
+          return `- ${j.nome}${numeros(j) ? `: ${numeros(j)}` : ''}${premios.length ? ` (${premios.join(', ')})` : ''}`;
+        }),
+        '',
+      ]),
+    ].join('\n').trimEnd();
+  }
+
+  const abrirRelatorioPartida = resumo => abrirTexto(relatorioPartida(resumo), {
+    kicker: 'Partida encerrada', titulo: 'Relatório da partida',
+    desc: 'Gols de cada time e de cada jogador. Os números já foram somados no site.',
+  });
+
+  async function encerrarPartida() {
+    if (!confirm('Encerrar a partida? Os gols e assistências vão ser somados no site e não dá para desfazer por aqui.')) return;
+    const btn = $('#btn-encerrar-partida');
+    btn.disabled = true;
+    try {
+      const resumo = ok(await sb.rpc('encerrar_partida', { p_id: st.partidaId }));
+      st.partidaId = null;
+      toast('Partida encerrada e números somados ✔');
+      await renderPartidas();
+      abrirRelatorioPartida(resumo);
+    } catch (e) {
+      toast('Erro ao encerrar: ' + erroLegivel(e));
+      btn.disabled = false;
     }
   }
 
@@ -826,6 +1087,8 @@
 
     const conteudo = $('#conteudo');
     conteudo.addEventListener('input', e => {
+      if (e.target.id === 'np-data') { st.novaPartida.data = e.target.value || hoje(); return; }
+      if (e.target.id === 'np-busca') { st.novaPartida.busca = e.target.value; renderListaNP(); return; }
       const inp = e.target.closest('input[data-k]');
       if (!inp) return;
       const l = st.linhas[+inp.dataset.i];
@@ -841,6 +1104,13 @@
     });
     conteudo.addEventListener('keydown', e => {
       if (e.target.id === 'add-nome' && e.key === 'Enter') { e.preventDefault(); adicionarJogador(); }
+      // Enter na busca: pega o único resultado (ou o "jogador novo")
+      if (e.target.id === 'np-busca' && e.key === 'Enter') {
+        e.preventDefault();
+        const opcoes = $$('#np-lista [data-np-pick], #np-novo');
+        if (opcoes.length === 1 || $('#np-novo')) (opcoes.length === 1 ? opcoes[0] : $('#np-novo')).click();
+      }
+      if (e.target.dataset.npTime != null && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); st.novaPartida.ativo = +e.target.dataset.npTime; renderNovaPartida(); }
     });
     conteudo.addEventListener('submit', e => {
       if (e.target.id !== 'form-convite') return;
@@ -850,6 +1120,8 @@
     });
     conteudo.addEventListener('click', e => {
       const t = e.target.closest('button');
+      const cardTime = e.target.closest('[data-np-time]');
+      if (cardTime && !t) { st.novaPartida.ativo = +cardTime.dataset.npTime; renderNovaPartida(); return; }
       if (!t) return;
       if (t.id === 'btn-add') adicionarJogador();
       else if (t.id === 'btn-csv') importarCsv();
@@ -866,6 +1138,37 @@
         if (!confirm('Cancelar esta alteração? Ela não será aplicada.')) return;
         acaoRevisao(async () => ok(await sb.rpc('recusar_alteracao', { p_id: +t.dataset.cancelar })), 'Alteração cancelada.');
       } else if (t.dataset.relatorio) abrirRelatorio(st.revisoes[t.dataset.relatorio]);
+      // Partidas
+      else if (t.id === 'btn-nova-partida') {
+        st.novaPartida = { data: hoje(), times: [[], [], [], []], nomesNovos: {}, ativo: 0, busca: '' };
+        carregarElenco().catch(() => {}).then(renderPartidas);
+      } else if (t.id === 'btn-voltar-partidas') {
+        if (st.novaPartida && st.novaPartida.times.some(ids => ids.length) && !confirm('Descartar os times montados?')) return;
+        st.novaPartida = null;
+        st.partidaId = null;
+        renderPartidas();
+      } else if (t.dataset.npPick) addJogadorNP(t.dataset.npPick);
+      else if (t.id === 'np-novo') { const nome = limpar(st.novaPartida.busca); addJogadorNP(slug(nome), nome); }
+      else if (t.dataset.npTirar) {
+        const [time, id] = t.dataset.npTirar.split(':');
+        st.novaPartida.times[+time] = st.novaPartida.times[+time].filter(x => x !== id);
+        renderNovaPartida();
+      } else if (t.id === 'btn-comecar-partida') comecarPartida();
+      else if (t.dataset.abrirPartida) { st.partidaId = +t.dataset.abrirPartida; renderPartidas(); }
+      else if (t.dataset.relatorioPartida) abrirRelatorioPartida(st.partidasLista[t.dataset.relatorioPartida].resumo);
+      else if (t.dataset.lance) anotarLance(t.dataset.jogador, t.dataset.lance, t);
+      else if (t.dataset.desfazerLance) {
+        t.disabled = true;
+        sb.from('partida_eventos').delete().eq('id', +t.dataset.desfazerLance)
+          .then(ok).then(renderPartidaAoVivo).catch(err => toast('Erro: ' + erroLegivel(err)));
+      } else if (t.id === 'btn-atualizar-partida') renderPartidaAoVivo();
+      else if (t.id === 'btn-encerrar-partida') encerrarPartida();
+      else if (t.id === 'btn-cancelar-partida') {
+        if (!confirm('Cancelar a partida? Os lances anotados são descartados e nada vai para o site.')) return;
+        sb.rpc('cancelar_partida', { p_id: st.partidaId }).then(ok)
+          .then(() => { st.partidaId = null; toast('Partida cancelada.'); return renderPartidas(); })
+          .catch(err => toast('Erro: ' + erroLegivel(err)));
+      }
       else if (t.id === 'btn-desfazer') { if (confirmarDescarte()) { st.mesNovo = false; abrirAba(st.aba); } }
       else if (t.id === 'btn-novo-mes') {
         const m = $('#novo-mes').value;

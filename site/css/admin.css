@@ -25,6 +25,62 @@
 .adm-rev-mud { display: block; color: var(--texto-2); font-size: 13px; }
 .adm-rev .adm-barra { margin: 10px 0 8px; }
 .adm-tag-saiu { background: color-mix(in srgb, #d64545 15%, transparent); color: #d64545; }
+/* Partidas */
+.adm-data { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--texto-2); }
+.pt-times { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 12px 0; }
+@media (min-width: 700px) { .pt-times { grid-template-columns: 1fr 1fr; } }
+.pt-time { background: var(--surface); border: 1px solid var(--borda-forte); border-top: 4px solid var(--cor-time); border-radius: 16px; padding: 12px; min-width: 0; }
+.pt-cor-0 { --cor-time: #2a78d6; } .pt-cor-1 { --cor-time: #d64545; } .pt-cor-2 { --cor-time: #16a34a; } .pt-cor-3 { --cor-time: #9a9a9a; }
+.pt-qtd { font-size: 12px; color: var(--texto-3); }
+.pt-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 16px; }
+.pt-placar { font-family: var(--fonte-titulo); font-size: 40px; line-height: 1; color: var(--cor-time); }
+.pt-chips { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.pt-chips li { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 10px; border-radius: 99px; background: var(--surface-2); font-size: 13px; }
+.pt-chips button { border: 0; background: none; color: var(--texto-3); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.pt-chips button:hover { color: #d64545; }
+.pt-vazio { color: var(--texto-3); font-size: 13px; background: none !important; padding-left: 0 !important; }
+.pt-time .adm-add input { flex: 1; width: auto; min-width: 0; }
+.pt-jogadores { list-style: none; margin: 0; padding: 0; }
+.pt-jogadores li { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--borda); font-size: 14px; }
+.pt-jogadores .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pt-num { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--texto-2); min-width: 36px; }
+.pt-mais { border: 1px solid var(--borda-forte); background: var(--surface-2); color: var(--texto); border-radius: 10px; padding: 6px 8px; font-size: 13px; font-weight: 700; cursor: pointer; min-width: 44px; min-height: 36px; }
+.pt-mais:hover { border-color: var(--cor-time); }
+.pt-mais:active { transform: scale(.94); }
+.pt-mais:disabled { opacity: .5; }
+.pt-lances li { font-size: 13px; }
+
+/* Montagem: escolher o time e tocar nos nomes */
+.pt-montagem { grid-template-columns: 1fr 1fr; gap: 8px; }
+.pt-montagem .pt-time { cursor: pointer; transition: background .15s, box-shadow .15s; min-height: 92px; }
+.pt-montagem .pt-time:focus-visible { outline: 2px solid var(--cor-time); outline-offset: 2px; }
+.pt-ativo { background: color-mix(in srgb, var(--cor-time) 12%, var(--surface)); box-shadow: 0 0 0 2px var(--cor-time); }
+.pt-ativo .pt-qtd { color: var(--cor-time); font-weight: 700; }
+.pt-pool { background: var(--surface); border: 1px solid var(--borda-forte); border-radius: 16px; padding: 12px; margin: 4px 0 12px; }
+.pt-pool-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.pt-pool #np-busca { width: 100%; margin-bottom: 4px; }
+.pt-grupo { margin: 10px 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--texto-3); }
+.pt-picks { display: flex; flex-wrap: wrap; gap: 6px; }
+.pt-pick { border: 1px solid var(--borda-forte); background: var(--surface-2); color: var(--texto); border-radius: 99px; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; min-height: 40px; }
+.pt-pick:hover { border-color: var(--acento); }
+.pt-pick:active { transform: scale(.96); }
+.pt-pick-novo { width: 100%; margin-top: 8px; border-style: dashed; color: var(--acento); border-radius: 12px; text-align: left; }
+.pt-montagem .pt-chips li { font-size: 12px; }
+
+/* Celular: os adms anotam a partida pelo telefone */
+@media (max-width: 600px) {
+  .adm { padding-top: 16px; }
+  #usuario-email { display: none; }
+  #tela-painel > .secao-cab { margin-bottom: 10px; gap: 8px; }
+  #tela-painel > .secao-cab .kicker { display: none; }
+  #painel-titulo { font-size: 30px; }
+  #nova-temporada, #btn-nova-temporada { display: none; }
+  .pt-time { padding: 10px; }
+  .pt-jogadores li { gap: 5px; padding: 7px 0; font-size: 15px; }
+  .pt-num { min-width: 32px; }
+  .pt-mais { min-width: 52px; min-height: 44px; font-size: 15px; }
+  .pt-placar { font-size: 44px; }
+}
 .adm-modal-rodape { display: flex; justify-content: space-between; gap: 12px; margin-top: 4px; }
 .adm-msg { margin: 12px 0 0; font-size: 14px; color: var(--texto-2); min-height: 1.2em; }
 .adm-msg.erro, .adm-erro { color: #d64545; }
