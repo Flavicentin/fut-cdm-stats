@@ -833,8 +833,13 @@
     renderMeses();
     if (state.meses.length) { renderCorrida(); renderHistorico(); renderHeatMeses(); }
     Charts.iniciar(state.jogadores, MIN_JOGOS);
-    const top = [...state.regulares].sort((x, y) => y.calc - x.calc);
-    state.a = top[0].id; state.b = top[1].id;
+    // Duelo inicial: os 2 melhores regulares; no começo da temporada (ninguém com o mínimo de jogos)
+    // usa quem já jogou, por G+A. Com menos de 2, o comparativo fica vazio esperando a escolha.
+    const top = state.regulares.length >= 2
+      ? [...state.regulares].sort((x, y) => y.calc - x.calc)
+      : [...state.comJogos].sort((x, y) => y.ga - x.ga || y.gols - x.gols);
+    state.a = top[0]?.id ?? null;
+    state.b = top[1]?.id ?? null;
     definirDuelo(null, null, false);
     ligarEventos();
     rota();

@@ -21,11 +21,19 @@ window.Db = (() => {
   }
 
   async function carregarTemporada(temporada) {
+    if (temporada) {
+      // temporada pedida no link (?temporada=); se não existir, cai na mais recente
+      try {
+        return await doSupabase(temporada);
+      } catch (e) {
+        console.warn(`Temporada ${temporada} indisponível, abrindo a mais recente:`, e.message);
+      }
+    }
     try {
-      return await doSupabase(temporada);
+      return await doSupabase();
     } catch (e) {
       console.warn('Usando o JSON local:', e.message);
-      return doJson(temporada);
+      return doJson();
     }
   }
 
