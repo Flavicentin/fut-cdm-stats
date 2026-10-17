@@ -13,15 +13,27 @@
 .adm-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .6); backdrop-filter: blur(3px); }
 .adm-modal-caixa { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--borda-forte); border-radius: 20px; padding: 24px; box-shadow: var(--sombra); }
 .adm-modal-titulo { font-size: clamp(32px, 6vw, 42px); }
+.adm-modal-largo { max-width: 560px; }
+.adm-modal-largo textarea { width: 100%; font-family: var(--fonte); font-size: 13px; min-height: 220px; margin-bottom: 4px; resize: vertical; }
+.adm-pendente { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--ouro) 14%, transparent); color: var(--texto); font-size: 14px; }
+.adm-pendente .adm-link { margin: 0 0 0 4px; }
+.adm-rev { margin: 0 0 12px; padding: 14px 16px 6px; background: var(--surface); border: 1px solid var(--borda-forte); border-radius: 16px; }
+.adm-rev header { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.adm-rev header small { color: var(--texto-3); }
+.adm-rev ul { margin: 10px 0 0; padding-left: 18px; font-size: 14px; }
+.adm-rev li { margin: 4px 0; }
+.adm-rev-mud { display: block; color: var(--texto-2); font-size: 13px; }
+.adm-rev .adm-barra { margin: 10px 0 8px; }
+.adm-tag-saiu { background: color-mix(in srgb, #d64545 15%, transparent); color: #d64545; }
 .adm-modal-rodape { display: flex; justify-content: space-between; gap: 12px; margin-top: 4px; }
 .adm-msg { margin: 12px 0 0; font-size: 14px; color: var(--texto-2); min-height: 1.2em; }
 .adm-msg.erro, .adm-erro { color: #d64545; }
 
-.adm input, .adm select, .adm textarea {
+.adm input, .adm select, .adm textarea, .adm-modal input, .adm-modal textarea {
   font: inherit; font-size: 14px; color: var(--texto); background: var(--surface);
   border: 1px solid var(--borda-forte); border-radius: 10px; padding: 8px 10px; min-width: 0;
 }
-.adm input:focus, .adm select:focus, .adm textarea:focus { outline: 2px solid var(--acento); outline-offset: -1px; border-color: transparent; }
+.adm input:focus, .adm select:focus, .adm textarea:focus, .adm-modal input:focus, .adm-modal textarea:focus { outline: 2px solid var(--acento); outline-offset: -1px; border-color: transparent; }
 .adm textarea { width: 100%; min-height: 140px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
 
 .btn-primario { background: var(--acento); border-color: var(--acento); color: #04150a; font-weight: 700; }

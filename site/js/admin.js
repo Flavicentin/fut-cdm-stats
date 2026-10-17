@@ -62,6 +62,8 @@
     if (/jogadores_nome_unico/.test(m)) return 'Já existe um jogador com esse nome.';
     if (/convites_admin_pkey/.test(m)) return 'Esse e-mail já está na lista de convites.';
     if (/notas_over_\w+_check/.test(m)) return 'As notas vão de 1 a 99 (deixe em branco quem não tem nota).';
+    if (/alteracoes_uma_pendente/.test(m)) return 'Já existe uma alteração desta aba esperando revisão. Aprove ou cancele em Revisões antes.';
+    if (/relation .*alteracoes.* does not exist|Could not find the table/i.test(m)) return 'A revisão de alterações ainda não foi instalada no banco (rode a migração revisao_de_alteracoes).';
     if (/row-level security|permission denied|42501/.test(m)) return 'Sem permissão. Sua conta precisa ser admin (ou a sessão expirou: saia e entre de novo).';
     return m;
   }
@@ -141,6 +143,7 @@
       if (!ok(await sb.rpc('is_admin'))) return mostrarEspera();
       await carregarBase();
       atualizarPedidos();
+      atualizarRevisoes();
       mostrar('painel');
       // Enquanto o adm não criar a própria senha (link mágico ou senha provisória), o popup é obrigatório
       if (!st.usuario.user_metadata?.senha_criada) abrirSenha(true);
@@ -309,7 +312,7 @@
 
   const ABAS = {
     temporada: {
-      desc: 'Totais oficiais da temporada (aba “Médias”). Quem está aqui faz parte do elenco.',
+      desc: 'Totais oficiais da temporada (aba “Médias”). Quem está aqui faz parte do elenco. Gols, assistências e honrarias lançados na aba Mês já somam aqui sozinhos ao aprovar; use esta aba para jogos, novos jogadores no elenco e correções.',
       csv: 'Médias',
       podeAdicionar: true,
       cols: () => [{ k: 'partidas', r: 'Jogos' }, { k: 'gols', r: 'Gols' }, { k: 'assist', r: 'Assist' }],
@@ -327,17 +330,13 @@
           if (row) row.v = { partidas: inteiro(l.Jogos), gols: inteiro(l.Gols), assist: inteiro(l.Assist) };
         }
       },
-      async salvar() {
-        const rows = st.linhas.map(l => ({
-          temporada_id: st.temporada, jogador_id: l.id,
-          partidas: l.v.partidas || 0, gols: l.v.gols || 0, assist: l.v.assist || 0,
-        }));
-        if (rows.length) ok(await sb.from('estatisticas_temporada').upsert(rows, { onConflict: 'temporada_id,jogador_id' }));
-      },
+      payload: () => ({
+        linhas: st.linhas.map(l => ({ jogador_id: l.id, partidas: l.v.partidas || 0, gols: l.v.gols || 0, assist: l.v.assist || 0 })),
+      }),
     },
 
     mes: {
-      desc: 'Gols, assistências e honrarias de um mês (aba do mês). Salvar substitui o mês inteiro.',
+      desc: 'Gols, assistências e honrarias de um mês (aba do mês). Ao aprovar, substitui o mês inteiro e soma a diferença nos totais da temporada de quem é do elenco. Jogos: atualize na aba Temporada.',
       csv: 'do mês (ex.: Outubro)',
       podeAdicionar: true,
       podeRemover: true,
@@ -359,16 +358,14 @@
           if (row) row.v = v;
         }
       },
-      async salvar() {
-        const p_linhas = st.linhas
+      payload: () => ({
+        linhas: st.linhas
           .filter(l => Object.values(l.v).some(Boolean))
           .map(l => ({
             jogador_id: l.id, gols: l.v.gols || 0, assist: l.v.assist || 0,
             honras: Object.fromEntries(st.tipos.filter(t => l.v[t.id] > 0).map(t => [t.id, l.v[t.id]])),
-          }));
-        ok(await sb.rpc('salvar_mes', { p_temporada: st.temporada, p_mes: `${st.mes}-01`, p_linhas }));
-        st.mesNovo = false;
-      },
+          })),
+      }),
     },
 
     honrarias: {
@@ -389,10 +386,7 @@
           for (const [col, k] of Object.entries(HONRAS_CSV)) if (inteiro(l[col])) row.v[k] = inteiro(l[col]);
         }
       },
-      async salvar() {
-        const p_linhas = st.linhas.map(l => ({ jogador_id: l.id, honras: l.v }));
-        ok(await sb.rpc('salvar_honrarias_temporada', { p_temporada: st.temporada, p_linhas }));
-      },
+      payload: () => ({ linhas: st.linhas.map(l => ({ jogador_id: l.id, honras: l.v })) }),
     },
 
     over: {
@@ -416,14 +410,12 @@
           row.v = Object.fromEntries(Object.entries(OVER_CSV).map(([col, k]) => [k, l[col] ? inteiro(l[col]) : null]));
         }
       },
-      async salvar() {
+      payload() {
         const temNota = l => NOTAS.some(([k]) => l.v[k] != null);
-        const com = st.linhas.filter(temNota).map(l => ({
-          temporada_id: st.temporada, jogador_id: l.id, ...Object.fromEntries(NOTAS.map(([k]) => [k, l.v[k] ?? null])),
-        }));
-        const sem = st.linhas.filter(l => l.tinha && !temNota(l)).map(l => l.id);
-        if (com.length) ok(await sb.from('notas_over').upsert(com, { onConflict: 'temporada_id,jogador_id' }));
-        if (sem.length) ok(await sb.from('notas_over').delete().eq('temporada_id', st.temporada).in('jogador_id', sem));
+        return {
+          com: st.linhas.filter(temNota).map(l => ({ jogador_id: l.id, ...Object.fromEntries(NOTAS.map(([k]) => [k, l.v[k] ?? null])) })),
+          sem: st.linhas.filter(l => l.tinha && !temNota(l)).map(l => l.id),
+        };
       },
     },
   };
@@ -460,20 +452,166 @@
     st.avisos = [];
     $$('#abas .aba').forEach(b => b.classList.toggle('ativa', b.dataset.aba === aba));
     const conteudo = $('#conteudo');
-    if (!st.temporada && aba !== 'admins') {
+    if (!st.temporada && aba !== 'admins' && aba !== 'revisoes') {
       conteudo.innerHTML = '<p class="adm-vazio">Nenhuma temporada cadastrada. Crie uma acima.</p>';
       return;
     }
     conteudo.innerHTML = '<p class="adm-vazio">Carregando…</p>';
     try {
       if (aba === 'admins') return await renderAdmins();
+      if (aba === 'revisoes') return await renderRevisoes();
       await carregarElenco();
       st.linhas = (await ABAS[aba].carregar()).sort(porNome);
+      // foto do que está gravado, para montar o resumo da alteração
+      st.original = new Map(st.linhas.map(l => [l.id, { nome: l.nome, v: { ...l.v } }]));
+      st.pendente = await pendenteDaAba();
       marcarSujo(false);
       renderGrade();
     } catch (e) {
       console.error(e);
       conteudo.innerHTML = `<p class="adm-vazio adm-erro">Erro ao carregar: ${esc(erroLegivel(e))}</p>`;
+    }
+  }
+
+  /* ---------------- Revisão ---------------- */
+  const mesData = () => (st.aba === 'mes' ? `${st.mes}-01` : null);
+  const nomeMes = m => `${NOME_MES[+m.slice(5, 7)]} ${m.slice(0, 4)}`;
+  const sinal = n => (n > 0 ? `+${n}` : String(n));
+
+  async function pendenteDaAba() {
+    let q = sb.from('alteracoes').select('id,autor').eq('temporada_id', st.temporada).eq('aba', st.aba).eq('status', 'pendente');
+    q = st.aba === 'mes' ? q.eq('mes', mesData()) : q.is('mes', null);
+    const { data } = await q.maybeSingle();
+    return data || null;
+  }
+
+  // Compara a grade com o que está gravado: [{ nome, estado, mudancas: [{ r, tipo, de, para }] }]
+  function montarResumo() {
+    const a = ABAS[st.aba];
+    const cols = a.cols();
+    const tipo = c => (c.h ? 'honra' : a.vazioEhNulo ? 'nota' : 'num');
+    const rotulo = c => {
+      if (!c.h) return c.r;
+      const t = st.tipos.find(x => x.id === c.k);
+      return `${t.icone} ${t.nome}${t.grupo === 'm' ? ' do mês' : ''}`;
+    };
+    const norm = v => (a.vazioEhNulo ? v ?? null : v || 0);
+    const atuais = new Map(st.linhas
+      .filter(l => st.aba !== 'mes' || Object.values(l.v).some(Boolean))
+      .map(l => [l.id, l]));
+    const itens = [];
+    for (const id of new Set([...st.original.keys(), ...atuais.keys()])) {
+      const ori = st.original.get(id), cur = atuais.get(id);
+      const mudancas = cols
+        .map(c => ({ k: c.k, r: rotulo(c), tipo: tipo(c), de: norm(ori?.v[c.k]), para: norm(cur?.v[c.k]) }))
+        .filter(m => m.de !== m.para);
+      const estado = !ori ? 'entrou' : !cur ? 'saiu' : null;
+      if (mudancas.length || estado) itens.push({ id, nome: (cur || ori).nome, estado, cadastroNovo: !!cur?.novo, mudancas });
+    }
+    itens.sort(porNome);
+    const titulo = { temporada: `Totais da temporada ${st.temporada}`, mes: nomeMes(st.mes), honrarias: `Honrarias da temporada ${st.temporada}`, over: `Notas dos adms · ${st.temporada}` }[st.aba];
+    return { titulo, itens };
+  }
+
+  const textoMudanca = m => (m.tipo === 'nota'
+    ? `${m.r} ${m.de ?? '—'} → ${m.para ?? '—'}`
+    : `${m.r} ${m.de} → ${m.para} (${sinal(m.para - m.de)})`);
+
+  // Texto para o grupo do WhatsApp (negrito com *)
+  function relatorio(alt) {
+    const curto = (m, n) => (m.tipo === 'honra' ? m.r
+      : { Gols: Math.abs(n) === 1 ? 'gol' : 'gols', Assist: 'assist.', Jogos: Math.abs(n) === 1 ? 'jogo' : 'jogos' }[m.r] || m.r);
+    const linhas = alt.resumo.itens.map(i => {
+      if (i.estado === 'saiu') return `*${i.nome}*: saiu da lista`;
+      const partes = i.mudancas.map(m => (m.tipo === 'nota'
+        ? `${m.r} ${m.de ?? '—'}→${m.para ?? '—'}`
+        : `${sinal(m.para - m.de)} ${curto(m, m.para - m.de)}`));
+      return `*${i.nome}*${i.estado === 'entrou' ? ' (novo na lista)' : ''}: ${partes.join(' · ')}`;
+    });
+    return [`⚽ *FUT CDM · ${alt.resumo.titulo}*`, 'Atualização revisada e aprovada ✅', '', ...linhas, '', `📊 ${location.origin}/`].join('\n');
+  }
+
+  function abrirRelatorio(alt) {
+    const texto = relatorio(alt);
+    $('#relatorio-texto').value = texto;
+    $('#btn-rel-whats').href = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    $('#modal-relatorio').hidden = false;
+  }
+
+  async function enviarRevisao() {
+    const resumo = montarResumo();
+    if (!resumo.itens.length) return toast('Nada mudou em relação ao que está gravado.');
+    const btn = $('#btn-salvar');
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+    try {
+      const payload = { ...ABAS[st.aba].payload(), novos: st.linhas.filter(l => l.novo).map(l => ({ id: l.id, nome: l.nome })) };
+      ok(await sb.from('alteracoes').insert({ temporada_id: st.temporada, aba: st.aba, mes: mesData(), payload, resumo }));
+      marcarSujo(false);
+      toast('Enviado para revisão. Outro adm precisa aprovar.');
+      atualizarRevisoes();
+      await abrirAba(st.aba);
+    } catch (e) {
+      console.error(e);
+      toast('Erro ao enviar: ' + erroLegivel(e));
+      btn.disabled = false;
+      btn.textContent = 'Enviar para revisão';
+    }
+  }
+
+  async function atualizarRevisoes() {
+    const { count } = await sb.from('alteracoes').select('id', { count: 'exact', head: true }).eq('status', 'pendente');
+    $('[data-aba="revisoes"]').textContent = count ? `🧾 Revisões · ${count}` : '🧾 Revisões';
+  }
+
+  async function renderRevisoes() {
+    const rows = ok(await sb.from('alteracoes')
+      .select('id,temporada_id,aba,mes,resumo,status,criado_por,autor,criado_em,revisor,revisado_em,motivo')
+      .order('criado_em', { ascending: false }).limit(40));
+    st.revisoes = Object.fromEntries(rows.map(r => [r.id, r]));
+    const quando = d => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const pendentes = rows.filter(r => r.status === 'pendente');
+    const historico = rows.filter(r => r.status !== 'pendente');
+    const STATUS = { aprovada: '✅ aprovada', recusada: '❌ recusada', cancelada: '↩️ cancelada' };
+    const cartao = r => {
+      const meu = r.criado_por === st.usuario.id;
+      return `
+        <article class="adm-rev">
+          <header><b>${esc(r.resumo.titulo)}</b> <small>enviado por ${esc(r.autor || '?')} · ${quando(r.criado_em)}</small></header>
+          <ul>${r.resumo.itens.map(i => `
+            <li><b>${esc(i.nome)}</b>${i.estado === 'entrou' ? ` <span class="adm-tag">${i.cadastroNovo ? 'jogador novo' : 'entrou'}</span>` : ''}${i.estado === 'saiu' ? ' <span class="adm-tag adm-tag-saiu">saiu</span>' : ''}
+              ${i.mudancas.length ? `<span class="adm-rev-mud">${i.mudancas.map(m => esc(textoMudanca(m))).join(' · ')}</span>` : ''}</li>`).join('')}
+          </ul>
+          <div class="adm-barra">
+            ${meu
+              ? '<span class="adm-sujo">Aguardando outro adm aprovar</span><span class="espaco"></span><button class="btn btn-perigo" data-cancelar="' + r.id + '">Cancelar</button>'
+              : '<span class="espaco"></span><button class="btn btn-perigo" data-recusar="' + r.id + '">Recusar</button><button class="btn btn-primario" data-aprovar="' + r.id + '">Aprovar</button>'}
+          </div>
+        </article>`;
+    };
+    $('#conteudo').innerHTML = `
+      <p class="painel-desc">Toda mudança nas estatísticas passa por aqui: outro adm confere e aprova, e só então ela vai para o site. Depois de aprovar, mande o relatório no grupo.</p>
+      <h2 class="adm-sub">Pendentes${pendentes.length ? ` · ${pendentes.length}` : ''}</h2>
+      ${pendentes.map(cartao).join('') || '<p class="adm-vazio">Nenhuma alteração esperando revisão.</p>'}
+      <h2 class="adm-sub">Histórico</h2>
+      <ul class="adm-lista">
+        ${historico.map(r => `
+          <li>
+            <span class="grow"><b>${esc(r.resumo.titulo)}</b> <small style="color:var(--texto-3)">${STATUS[r.status]} · por ${esc(r.autor || '?')}${r.revisor ? `, revisado por ${esc(r.revisor)}` : ''} · ${quando(r.revisado_em || r.criado_em)}${r.motivo ? ` · “${esc(r.motivo)}”` : ''}</small></span>
+            ${r.status === 'aprovada' ? `<button class="btn" data-relatorio="${r.id}">Relatório</button>` : ''}
+          </li>`).join('') || '<li>Nada ainda.</li>'}
+      </ul>`;
+    atualizarRevisoes();
+  }
+
+  async function acaoRevisao(fn, msg, depois) {
+    try {
+      await fn();
+      toast(msg);
+      await renderRevisoes();
+      depois?.();
+    } catch (e) {
+      toast('Erro: ' + erroLegivel(e));
     }
   }
 
@@ -504,17 +642,18 @@
       <div class="adm-barra">${seletorMes}</div>
       <details class="adm-csv" ${st.avisos.length ? 'open' : ''}>
         <summary>📋 Colar da planilha (aba ${esc(a.csv)})</summary>
-        <p>Selecione a aba inteira no Google Planilhas (Ctrl+A), copie (Ctrl+C) e cole aqui. Também aceita o conteúdo de um .csv exportado. Nada é gravado até você clicar em Salvar.</p>
+        <p>Selecione a aba inteira no Google Planilhas (Ctrl+A), copie (Ctrl+C) e cole aqui. Também aceita o conteúdo de um .csv exportado. Nada vai para o site até outro adm aprovar.</p>
         <textarea id="csv" placeholder="Jogadores,Gols,Assist,…"></textarea>
         <div class="adm-barra"><button class="btn" id="btn-csv">Pré-visualizar</button></div>
         ${st.avisos.length ? `<ul class="adm-avisos">${st.avisos.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
       </details>
+      ${st.pendente ? `<p class="adm-pendente">⏳ Já existe uma alteração desta ${st.aba === 'mes' ? 'aba neste mês' : 'aba'} esperando revisão (enviada por ${esc(st.pendente.autor || '?')}). Ela precisa ser aprovada ou cancelada antes de enviar outra. <button class="adm-link" data-ir="revisoes">Ver em Revisões</button></p>` : ''}
       <div class="adm-barra">
         ${adicionar}
         <span class="espaco"></span>
-        <span class="adm-sujo" id="aviso-sujo" ${st.sujo ? '' : 'hidden'}>Alterações não salvas</span>
+        <span class="adm-sujo" id="aviso-sujo" ${st.sujo ? '' : 'hidden'}>Alterações não enviadas</span>
         <button class="btn" id="btn-desfazer">Recarregar</button>
-        <button class="btn btn-primario" id="btn-salvar">Salvar</button>
+        <button class="btn btn-primario" id="btn-salvar" ${st.pendente ? 'disabled' : ''}>${st.pendente ? 'Aguardando revisão' : 'Enviar para revisão'}</button>
       </div>
       <div class="adm-tabela-box">
         ${st.linhas.length ? `
@@ -559,31 +698,7 @@
     st.linhas.sort(porNome);
     marcarSujo();
     renderGrade();
-    toast(`${tabela.length} linhas lidas. Confira a tabela e clique em Salvar.`);
-  }
-
-  async function salvar() {
-    const btn = $('#btn-salvar');
-    btn.disabled = true;
-    btn.textContent = 'Salvando…';
-    try {
-      const novos = st.linhas.filter(l => l.novo).map(l => ({ id: l.id, nome: l.nome }));
-      if (novos.length) {
-        ok(await sb.from('jogadores').insert(novos));
-        definirJogadores([...st.jogadores, ...novos]);
-        // já gravados: se o passo seguinte falhar, o novo Salvar não tenta inserir de novo
-        for (const l of st.linhas) delete l.novo;
-      }
-      await ABAS[st.aba].salvar();
-      marcarSujo(false);
-      toast('Salvo ✔');
-      await abrirAba(st.aba);
-    } catch (e) {
-      console.error(e);
-      toast('Erro ao salvar: ' + erroLegivel(e));
-      btn.disabled = false;
-      btn.textContent = 'Salvar';
-    }
+    toast(`${tabela.length} linhas lidas. Confira a tabela e clique em Enviar para revisão.`);
   }
 
   /* ---------------- Admins ---------------- */
@@ -659,7 +774,21 @@
       await aoMudarSessao(data.session);
       if (!$('#tela-espera').hidden) toast('Ainda não foi aprovado.');
     });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal-senha').hidden && !senhaObrigatoria) fecharSenha(); });
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (!$('#modal-senha').hidden && !senhaObrigatoria) fecharSenha();
+      $('#modal-relatorio').hidden = true;
+    });
+    $('#btn-rel-fechar').addEventListener('click', () => { $('#modal-relatorio').hidden = true; });
+    $('#btn-rel-copiar').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText($('#relatorio-texto').value);
+        toast('Relatório copiado. É só colar no grupo.');
+      } catch {
+        $('#relatorio-texto').select();
+        toast('Selecionei o texto: use Ctrl+C.');
+      }
+    });
     $('#btn-sair').addEventListener('click', async () => {
       if (!confirmarDescarte()) return;
       marcarSujo(false);
@@ -724,7 +853,19 @@
       if (!t) return;
       if (t.id === 'btn-add') adicionarJogador();
       else if (t.id === 'btn-csv') importarCsv();
-      else if (t.id === 'btn-salvar') salvar();
+      else if (t.id === 'btn-salvar') enviarRevisao();
+      else if (t.dataset.ir) { if (confirmarDescarte()) abrirAba(t.dataset.ir); }
+      else if (t.dataset.aprovar) {
+        const alt = st.revisoes[t.dataset.aprovar];
+        acaoRevisao(async () => ok(await sb.rpc('aprovar_alteracao', { p_id: alt.id })), 'Aprovado e aplicado no site ✔', () => abrirRelatorio(alt));
+      } else if (t.dataset.recusar) {
+        const motivo = prompt('Motivo da recusa (opcional):');
+        if (motivo === null) return;
+        acaoRevisao(async () => ok(await sb.rpc('recusar_alteracao', { p_id: +t.dataset.recusar, p_motivo: motivo })), 'Alteração recusada.');
+      } else if (t.dataset.cancelar) {
+        if (!confirm('Cancelar esta alteração? Ela não será aplicada.')) return;
+        acaoRevisao(async () => ok(await sb.rpc('recusar_alteracao', { p_id: +t.dataset.cancelar })), 'Alteração cancelada.');
+      } else if (t.dataset.relatorio) abrirRelatorio(st.revisoes[t.dataset.relatorio]);
       else if (t.id === 'btn-desfazer') { if (confirmarDescarte()) { st.mesNovo = false; abrirAba(st.aba); } }
       else if (t.id === 'btn-novo-mes') {
         const m = $('#novo-mes').value;

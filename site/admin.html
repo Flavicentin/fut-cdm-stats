@@ -80,6 +80,7 @@
           <button class="aba" data-aba="mes">📅 Mês</button>
           <button class="aba" data-aba="honrarias">🏆 Honrarias</button>
           <button class="aba" data-aba="over">📝 Notas Over</button>
+          <button class="aba" data-aba="revisoes">🧾 Revisões</button>
           <button class="aba" data-aba="admins">🔑 Admins</button>
         </div>
 
@@ -105,6 +106,21 @@
         <button class="adm-link" type="button" id="btn-senha-sair">Sair</button>
       </div>
     </form>
+  </div>
+
+  <!-- RELATÓRIO PARA O WHATSAPP -->
+  <div class="adm-modal" id="modal-relatorio" hidden>
+    <div class="adm-modal-caixa adm-modal-largo" role="dialog" aria-modal="true" aria-labelledby="relatorio-titulo">
+      <p class="kicker">Alteração aprovada</p>
+      <h2 class="adm-titulo adm-modal-titulo" id="relatorio-titulo">Relatório para o grupo</h2>
+      <p class="painel-desc">O que mudou para cada pessoa. Copie e cole no grupo, ou abra direto no WhatsApp.</p>
+      <textarea id="relatorio-texto" readonly rows="12" aria-label="Relatório"></textarea>
+      <div class="adm-form">
+        <button class="btn btn-primario" type="button" id="btn-rel-copiar">Copiar</button>
+        <a class="btn" id="btn-rel-whats" target="_blank" rel="noopener">Abrir no WhatsApp</a>
+        <button class="btn" type="button" id="btn-rel-fechar">Fechar</button>
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast" role="status"></div>
