@@ -512,7 +512,9 @@
       if (mudancas.length || estado) itens.push({ id, nome: (cur || ori).nome, estado, cadastroNovo: !!cur?.novo, mudancas });
     }
     itens.sort(porNome);
-    const titulo = { temporada: `Totais da temporada ${st.temporada}`, mes: nomeMes(st.mes), honrarias: `Honrarias da temporada ${st.temporada}`, over: `Notas dos adms · ${st.temporada}` }[st.aba];
+    // só calcula o título da aba atual (st.mes fica vazio se a aba Mês nunca foi aberta)
+    const titulo = st.aba === 'mes' ? nomeMes(st.mes)
+      : { temporada: `Totais da temporada ${st.temporada}`, honrarias: `Honrarias da temporada ${st.temporada}`, over: `Notas dos adms · ${st.temporada}` }[st.aba];
     return { titulo, itens };
   }
 
@@ -551,12 +553,13 @@
   });
 
   async function enviarRevisao() {
-    const resumo = montarResumo();
-    if (!resumo.itens.length) return toast('Nada mudou em relação ao que está gravado.');
     const btn = $('#btn-salvar');
-    btn.disabled = true;
-    btn.textContent = 'Enviando…';
     try {
+      // dentro do try: qualquer erro aqui aparece na tela em vez de travar em silêncio
+      const resumo = montarResumo();
+      if (!resumo.itens.length) return toast('Nada mudou em relação ao que está gravado.');
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
       const payload = { ...ABAS[st.aba].payload(), novos: st.linhas.filter(l => l.novo).map(l => ({ id: l.id, nome: l.nome })) };
       ok(await sb.from('alteracoes').insert({ temporada_id: st.temporada, aba: st.aba, mes: mesData(), payload, resumo }));
       marcarSujo(false);
