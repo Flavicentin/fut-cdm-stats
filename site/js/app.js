@@ -197,7 +197,7 @@
       [soma('gols'), 'gols marcados', int],
       [soma('assist'), 'assistências', int],
       [js.length, 'jogadores', int],
-      [soma('ga') / soma('partidas'), 'G+A por jogador a cada jogo', dec],
+      [soma('ga') / (soma('partidas') || 1), 'G+A por jogador a cada jogo', dec],
     ];
     $('#kpis').innerHTML = kpis.map(([v, r, f]) =>
       `<div class="kpi"><div class="kpi-valor num" data-contar="${v}" data-fmt="${f === dec ? 'dec' : 'int'}">${f(v)}</div><div class="kpi-rotulo">${r}</div></div>`).join('');
@@ -524,7 +524,9 @@
     if (location.hash.startsWith('#jogador/')) history.replaceState(null, '', location.pathname + location.search);
   }
 
-  const rival = id => state.regulares.filter(j => j.id !== id).sort((x, y) => y.calc - x.calc)[0].id;
+  // começo de temporada (ninguém com o mínimo de jogos): rival entre quem já jogou, por G+A
+  const rival = id => (state.regulares.filter(j => j.id !== id).sort((x, y) => y.calc - x.calc)[0]
+    || state.comJogos.filter(j => j.id !== id).sort((x, y) => y.ga - x.ga || y.gols - x.gols)[0])?.id || '';
 
   /* ---------------- Comparar ---------------- */
   const MODOS = { numeros: 'Números', honras: 'Honrarias', notas: 'Notas dos adms' };

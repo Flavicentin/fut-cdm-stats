@@ -121,6 +121,8 @@ const Charts = (() => {
     const hex = tok('acento').replace('#', '');
     const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
     const ord = jogadores.map(j => ({ id: j.id, name: j.nome, value: j[metricaFatia] })).sort((a, b) => b.value - a.value);
+    // temporada sem nenhum jogo ainda: gráfico vazio (sem isso o site inteiro para de carregar)
+    if (!ord.length) return { ...base(), series: [] };
     const total = ord.reduce((s, d) => s + d.value, 0);
     const min = ord[ord.length - 1].value, max = ord[0].value;
     const dados = ord.map(d => {

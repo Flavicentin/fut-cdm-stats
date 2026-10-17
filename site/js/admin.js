@@ -65,7 +65,9 @@
     if (/alteracoes_uma_pendente/.test(m)) return 'Já existe uma alteração desta aba esperando revisão. Aprove ou cancele em Revisões antes.';
     if (/partida/i.test(m) && /does not exist|Could not find the (table|function)/i.test(m)) return 'A aba Partidas ainda não foi instalada no banco (falta rodar a migração 20261017_partidas).';
     if (/relation .*alteracoes.* does not exist|Could not find the table/i.test(m)) return 'A revisão de alterações ainda não foi instalada no banco (rode a migração revisao_de_alteracoes).';
-    if (/row-level security|permission denied|42501/.test(m)) return 'Sem permissão. Sua conta precisa ser admin (ou a sessão expirou: saia e entre de novo).';
+    // lance numa partida que outro adm já encerrou/cancelou: a RLS só aceita lance em partida aberta
+    if (/row-level security.*partida_(eventos|jogadores)/.test(m)) return 'Essa partida não está mais aberta (outro adm encerrou ou cancelou).';
+    if (/row-level security|permission denied|42501|JWT expired|invalid JWT/i.test(m)) return 'Sem permissão. Sua conta precisa ser admin (ou a sessão expirou: saia e entre de novo).';
     return m;
   }
 
@@ -313,9 +315,10 @@
 
   const ABAS = {
     temporada: {
-      desc: 'Totais oficiais da temporada (aba “Médias”). Quem está aqui faz parte do elenco. Gols, assistências e honrarias lançados na aba Mês já somam aqui sozinhos ao aprovar; use esta aba para jogos, novos jogadores no elenco e correções.',
+      desc: 'Totais oficiais da temporada (aba “Médias”). Quem está aqui faz parte do elenco. Gols, assistências e honrarias lançados na aba Mês já somam aqui sozinhos ao aprovar; use esta aba para jogos, novos jogadores no elenco e correções. O × vermelho ao lado do nome tira o jogador da temporada com todos os números dele (depois da revisão).',
       csv: 'Médias',
       podeAdicionar: true,
+      podeRemover: true,
       cols: () => [{ k: 'partidas', r: 'Jogos' }, { k: 'gols', r: 'Gols' }, { k: 'assist', r: 'Assist' }],
       async carregar() {
         const [rows, conf] = await Promise.all([
@@ -333,6 +336,8 @@
       },
       payload: () => ({
         linhas: st.linhas.map(l => ({ jogador_id: l.id, partidas: l.v.partidas || 0, gols: l.v.gols || 0, assist: l.v.assist || 0 })),
+        // quem estava gravado e saiu da grade (× vermelho): apagado na aprovação (gatilho aplicar_remocao_jogadores)
+        remover: [...st.original.keys()].filter(id => !st.linhas.some(l => l.id === id)),
       }),
     },
 
@@ -528,7 +533,7 @@
     const curto = (m, n) => (m.tipo === 'honra' ? m.r.replace(/^\S+\s/, '')
       : { Gols: Math.abs(n) === 1 ? 'gol' : 'gols', Assist: Math.abs(n) === 1 ? 'assistência' : 'assistências', Jogos: Math.abs(n) === 1 ? 'jogo' : 'jogos' }[m.r] || m.r);
     const linhas = alt.resumo.itens.map(i => {
-      if (i.estado === 'saiu') return `*${i.nome}*: saiu da lista`;
+      if (i.estado === 'saiu') return `- ${i.nome}: ${alt.aba === 'temporada' ? 'removido da temporada' : 'saiu da lista'}`;
       const partes = i.mudancas.map(m => (m.tipo === 'nota'
         ? `${m.r} de ${m.de ?? '-'} para ${m.para ?? '-'}`
         : `${sinal(m.para - m.de)} ${curto(m, m.para - m.de)}`));
@@ -560,7 +565,9 @@
       if (!resumo.itens.length) return toast('Nada mudou em relação ao que está gravado.');
       btn.disabled = true;
       btn.textContent = 'Enviando…';
-      const payload = { ...ABAS[st.aba].payload(), novos: st.linhas.filter(l => l.novo).map(l => ({ id: l.id, nome: l.nome })) };
+      // no Mês, linha sem números não vai no payload: o jogador novo dela também não
+      const novos = st.linhas.filter(l => l.novo && (st.aba !== 'mes' || Object.values(l.v).some(Boolean)));
+      const payload = { ...ABAS[st.aba].payload(), novos: novos.map(l => ({ id: l.id, nome: l.nome })) };
       ok(await sb.from('alteracoes').insert({ temporada_id: st.temporada, aba: st.aba, mes: mesData(), payload, resumo }));
       marcarSujo(false);
       toast('Enviado para revisão. Outro adm precisa aprovar.');
@@ -820,6 +827,8 @@
     } catch (e) {
       toast('Erro: ' + erroLegivel(e));
       botao.disabled = false;
+      // se a partida foi encerrada por outro adm, volta para a lista
+      renderPartidaAoVivo().catch(() => {});
     }
   }
 
@@ -902,7 +911,14 @@
       <div class="adm-add">
         <input list="lista-jogadores" id="add-nome" placeholder="Nome do jogador" autocomplete="off">
         <button class="btn" id="btn-add">Adicionar</button>
+        <button class="btn" id="btn-add-varios" aria-expanded="${!!st.addVarios}">${st.addVarios ? 'Fechar lista' : 'Adicionar vários'}</button>
         <datalist id="lista-jogadores">${st.jogadores.map(j => `<option value="${esc(j.nome)}">`).join('')}</datalist>
+      </div>` : '';
+    const listaVarios = a.podeAdicionar && st.addVarios ? `
+      <div class="adm-varios">
+        <label for="add-varios">Um nome por linha (ou separados por vírgula). Apelidos são reconhecidos; nome que não existe vira jogador novo.</label>
+        <textarea id="add-varios" rows="6" placeholder="Roger&#10;Felps&#10;JP&#10;Fulano Novo"></textarea>
+        <div class="adm-barra"><button class="btn btn-primario" id="btn-add-lista">Adicionar lista</button></div>
       </div>` : '';
     const conferencia = st.aba === 'temporada' && st.conferencia?.length ? `
       <details class="adm-conf">
@@ -928,19 +944,19 @@
         <button class="btn" id="btn-desfazer">Recarregar</button>
         <button class="btn btn-primario" id="btn-salvar" ${st.pendente ? 'disabled' : ''}>${st.pendente ? 'Aguardando revisão' : 'Enviar para revisão'}</button>
       </div>
+      ${listaVarios}
       <div class="adm-tabela-box">
         ${st.linhas.length ? `
         <table class="adm-tabela">
-          <thead><tr><th>Jogador</th>${cols.map(c => `<th title="${esc(c.t || c.r)}" class="${c.g === 'm' ? 'grupo-m' : ''}">${esc(c.r)}</th>`).join('')}${a.podeRemover ? '<th></th>' : ''}</tr></thead>
+          <thead><tr><th>Jogador</th>${cols.map(c => `<th title="${esc(c.t || c.r)}" class="${c.g === 'm' ? 'grupo-m' : ''}">${esc(c.r)}</th>`).join('')}</tr></thead>
           <tbody>${st.linhas.map((l, i) => `
             <tr class="${l.novo ? 'novo' : l.convidado ? 'convidado' : ''}">
-              <td>${esc(l.nome)}</td>
+              <td>${a.podeRemover ? `<button class="remover" data-remover="${i}" aria-label="Remover ${esc(l.nome)}" title="Remover ${esc(l.nome)}">×</button>` : ''}${esc(l.nome)}</td>
               ${cols.map(c => {
                 const v = l.v[c.k];
                 const mostra = v == null || (c.h && !v) ? '' : v;
                 return `<td class="${c.h ? 'h' : ''} ${c.g === 'm' ? 'grupo-m' : ''}"><input type="number" min="0" max="${a.vazioEhNulo ? 99 : ''}" inputmode="numeric" data-i="${i}" data-k="${c.k}" value="${mostra}" aria-label="${esc(l.nome)} · ${esc(c.t || c.r)}"></td>`;
               }).join('')}
-              ${a.podeRemover ? `<td><button class="remover" data-remover="${i}" aria-label="Remover ${esc(l.nome)}">×</button></td>` : ''}
             </tr>`).join('')}
           </tbody>
         </table>` : `<p class="adm-vazio">${st.aba === 'temporada' || st.aba === 'mes' ?'Nenhum jogador ainda. Adicione ou cole da planilha.' : 'O elenco da temporada está vazio. Cadastre os jogadores na aba Temporada.'}</p>`}
@@ -961,6 +977,31 @@
     marcarSujo();
     renderGrade();
     $('#add-nome').focus();
+  }
+
+  // Lista de nomes de uma vez (um por linha ou separados por vírgula/ponto e vírgula)
+  function adicionarVarios() {
+    const nomes = [...new Set($('#add-varios').value.split(/[\n,;]+/).map(limpar).filter(Boolean))];
+    if (!nomes.length) return toast('Escreva pelo menos um nome.');
+    st.avisos = [];
+    let adicionados = 0, jaEstavam = 0, novos = 0, invalidos = 0;
+    for (const nome of nomes) {
+      const antes = st.linhas.length;
+      const row = acharOuCriar(nome, true);
+      if (!row) { invalidos++; continue; }
+      if (st.linhas.length === antes) { jaEstavam++; continue; }
+      adicionados++;
+      if (row.novo) novos++;
+      if (st.aba === 'temporada') row.v = { partidas: 0, gols: 0, assist: 0 };
+    }
+    st.linhas.sort(porNome);
+    if (adicionados) { marcarSujo(); st.addVarios = false; }
+    renderGrade();
+    const partes = [`${adicionados} adicionado${adicionados === 1 ? '' : 's'}`];
+    if (jaEstavam) partes.push(`${jaEstavam} já estava${jaEstavam === 1 ? '' : 'm'} na lista`);
+    if (novos) partes.push(`${novos} jogador${novos === 1 ? '' : 'es'} novo${novos === 1 ? '' : 's'}`);
+    if (invalidos) partes.push(`${invalidos} nome${invalidos === 1 ? '' : 's'} inválido${invalidos === 1 ? '' : 's'}`);
+    toast(partes.join(', ') + (adicionados ? '. Confira e envie para revisão.' : '.'));
   }
 
   function importarCsv() {
@@ -1136,6 +1177,8 @@
       if (cardTime && !t) { st.novaPartida.ativo = +cardTime.dataset.npTime; renderNovaPartida(); return; }
       if (!t) return;
       if (t.id === 'btn-add') adicionarJogador();
+      else if (t.id === 'btn-add-varios') { st.addVarios = !st.addVarios; renderGrade(); if (st.addVarios) $('#add-varios').focus(); }
+      else if (t.id === 'btn-add-lista') adicionarVarios();
       else if (t.id === 'btn-csv') importarCsv();
       else if (t.id === 'btn-salvar') enviarRevisao();
       else if (t.dataset.ir) { if (confirmarDescarte()) abrirAba(t.dataset.ir); }
@@ -1190,6 +1233,9 @@
         st.mesNovo = !st.meses.includes(m);
         abrirAba('mes');
       } else if (t.dataset.remover != null) {
+        const l = st.linhas[+t.dataset.remover];
+        if (st.aba === 'temporada' && st.original.has(l.id)
+          && !confirm(`Tirar ${l.nome} da temporada ${st.temporada}?\n\nDepois da revisão de outro adm, apaga os totais, as honrarias, as notas e os números dos meses dele nesta temporada.`)) return;
         st.linhas.splice(+t.dataset.remover, 1);
         marcarSujo();
         renderGrade();
