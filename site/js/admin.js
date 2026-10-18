@@ -745,7 +745,7 @@
         <input type="search" id="so-busca" placeholder="Buscar ou digitar nome novo" autocomplete="off" value="${esc(so.busca)}">
         <div id="so-lista"></div>
         <div class="pt-sorteio-opcoes">
-          <label><input type="checkbox" id="so-equilibrar" ${so.equilibrar ? 'checked' : ''}> Equilibrar (espalha os melhores pelo G+A por jogo)</label>
+          <span>Sorteio puro: ninguém é escolhido por nome ou números.</span>
           <button class="adm-link" id="btn-so-limpar" style="margin:0">Limpar seleção</button>
         </div>
       </section>
@@ -773,24 +773,19 @@
     $('#btn-sortear').textContent = `🎲 Sortear 4 times (${so.ids.length})`;
   }
 
-  // Divide em 4 times. Equilibrado: ordena pelo G+A por jogo (com um pouco de sorte) e distribui em "cobrinha".
+  // Sorteio puro: embaralha (Fisher-Yates) e distribui um por time, em rodízio
   function sortearTimes() {
     const so = st.sorteio;
     if (so.ids.length < 4) return toast('Escolha pelo menos 4 jogadores.');
-    const embaralhar = lista => lista.map(x => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
-    let ordem = embaralhar(so.ids);
-    if (so.equilibrar) {
-      const nota = id => {
-        const e = so.stats[id];
-        return e && e.partidas ? (e.gols + e.assist) / e.partidas : 0;
-      };
-      ordem = ordem.map(id => [nota(id) * (0.85 + Math.random() * 0.3), id]).sort((a, b) => b[0] - a[0]).map(x => x[1]);
+    const ordem = [...so.ids];
+    for (let i = ordem.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ordem[i], ordem[j]] = [ordem[j], ordem[i]];
     }
+    // o time que começa recebendo também é sorteado, para a sobra não cair sempre nos primeiros
+    const inicio = Math.floor(Math.random() * 4);
     const times = [[], [], [], []];
-    ordem.forEach((id, i) => {
-      const volta = Math.floor(i / 4), pos = i % 4;
-      times[so.equilibrar && volta % 2 ? 3 - pos : pos].push(id);
-    });
+    ordem.forEach((id, i) => times[(inicio + i) % 4].push(id));
     st.novaPartida = { data: so.data, times, nomesNovos: { ...so.nomesNovos }, ativo: 0, busca: '', modo: 'agendar' };
     renderNovaPartida();
     toast('Times sorteados! Troque quem precisar e salve.');
@@ -1325,7 +1320,6 @@
       if (e.target.id === 'np-busca') { st.novaPartida.busca = e.target.value; renderListaNP(); return; }
       if (e.target.id === 'so-busca') { st.sorteio.busca = e.target.value; renderListaSorteio(); return; }
       if (e.target.id === 'so-data') { st.sorteio.data = e.target.value || hoje(); return; }
-      if (e.target.id === 'so-equilibrar') { st.sorteio.equilibrar = e.target.checked; return; }
       const inp = e.target.closest('input[data-k]');
       if (!inp) return;
       const l = st.linhas[+inp.dataset.i];
@@ -1428,12 +1422,8 @@
       }
       // Sorteio e próxima partida
       else if (t.id === 'btn-sorteio') {
-        st.sorteio = { data: hoje(), ids: [], nomesNovos: {}, busca: '', equilibrar: true, stats: {} };
-        Promise.all([
-          carregarElenco().catch(() => {}),
-          sb.from('estatisticas_temporada').select('jogador_id,partidas,gols,assist').eq('temporada_id', st.temporada).then(ok)
-            .then(rows => { st.sorteio.stats = Object.fromEntries(rows.map(r => [r.jogador_id, r])); }).catch(() => {}),
-        ]).then(renderPartidas);
+        st.sorteio = { data: hoje(), ids: [], nomesNovos: {}, busca: '' };
+        carregarElenco().catch(() => {}).then(renderPartidas);
       } else if (t.dataset.soPick) {
         const so = st.sorteio, id = t.dataset.soPick;
         so.ids = so.ids.includes(id) ? so.ids.filter(x => x !== id) : [...so.ids, id];
