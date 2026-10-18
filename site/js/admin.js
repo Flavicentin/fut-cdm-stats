@@ -654,17 +654,27 @@
 
   async function renderPartidas() {
     clearInterval(st.pollPartida);
+    if (st.sorteio) return renderSorteio();
     if (st.novaPartida) return renderNovaPartida();
     if (st.partidaId) return renderPartidaAoVivo();
     const rows = ok(await sb.from('partidas').select('id,data,times_nomes,status,autor,resumo')
       .eq('temporada_id', st.temporada).order('data', { ascending: false }).limit(40));
     st.partidasLista = Object.fromEntries(rows.map(p => [p.id, p]));
+    const agendadas = rows.filter(p => p.status === 'agendada');
     const abertas = rows.filter(p => p.status === 'aberta');
     const encerradas = rows.filter(p => p.status === 'encerrada');
     const placar = p => p.resumo.times.map(t => `${esc(t.nome)} ${t.gols}`).join(' · ');
     $('#conteudo').innerHTML = `
       <p class="painel-desc">Anote os gols e assistências durante o fut. Ao encerrar, os números entram no mês da partida e nos totais da temporada (+1 jogo para quem jogou), e sai o relatório para o grupo.</p>
-      <div class="adm-barra"><button class="btn btn-primario" id="btn-nova-partida">＋ Nova partida</button></div>
+      <div class="adm-barra">
+        <button class="btn btn-primario" id="btn-nova-partida">＋ Nova partida</button>
+        <button class="btn" id="btn-sorteio">🎲 Sortear times</button>
+      </div>
+      ${agendadas.length ? `<h2 class="adm-sub">Próxima partida</h2>
+      <ul class="adm-lista">${agendadas.map(p => `
+        <li><span class="grow"><b>Partida de ${dataBR(p.data)}</b> <span class="adm-tag adm-tag-agendada">sorteada</span> <small style="color:var(--texto-3)">por ${esc(p.autor || '?')}</small></span>
+          <button class="btn" data-editar-agendada="${p.id}">Editar times</button>
+          <button class="btn btn-primario" data-iniciar-agendada="${p.id}">Iniciar</button></li>`).join('')}</ul>` : ''}
       ${abertas.length ? `<h2 class="adm-sub">Em andamento</h2>
       <ul class="adm-lista">${abertas.map(p => `
         <li><span class="grow"><b>Partida de ${dataBR(p.data)}</b> <small style="color:var(--texto-3)">criada por ${esc(p.autor || '?')}</small></span>
@@ -677,21 +687,35 @@
 
   /* Montar os 4 times */
   // Toque no time para escolher onde adicionar; toque no nome para colocar nele
+  // modo: 'nova' (começa na hora) · 'agendar' (times sorteados, ainda não salvos) · 'editar' (próxima partida salva)
   function renderNovaPartida() {
     const np = st.novaPartida;
+    const modo = np.modo || 'nova';
     const nomeDe = id => np.nomesNovos[id] || st.porId[id]?.nome || id;
+    const titulo = { nova: 'Nova partida', agendar: 'Times sorteados', editar: 'Próxima partida' }[modo];
+    const dica = modo === 'nova'
+      ? 'Toque no time e depois nos jogadores que vão jogar nele.'
+      : 'Para trocar: toque num time para selecioná-lo e depois no nome de alguém de outro time para trazê-lo. O × tira o jogador (quem desmarcou) e a lista abaixo coloca outro no time selecionado.';
+    const botoes = {
+      nova: `<button class="btn btn-primario" id="btn-comecar-partida">Começar partida (${np.times.flat().length})</button>`,
+      agendar: `<button class="btn" id="btn-sortear-de-novo">🎲 Sortear de novo</button>
+        <button class="btn btn-primario" id="btn-salvar-agendada">Salvar próxima partida</button>`,
+      editar: `<button class="btn btn-perigo" id="btn-cancelar-agendada">Cancelar partida</button>
+        <button class="btn" id="btn-salvar-agendada">Salvar times</button>
+        <button class="btn btn-primario" id="btn-iniciar-agendada">Iniciar partida</button>`,
+    }[modo];
     $('#conteudo').innerHTML = `
       <div class="adm-barra">
         <button class="btn" id="btn-voltar-partidas">← Voltar</button>
-        <h2 class="adm-sub" style="margin:0">Nova partida</h2>
+        <h2 class="adm-sub" style="margin:0">${titulo}</h2>
         <label class="adm-data">Data <input type="date" id="np-data" value="${np.data}"></label>
       </div>
-      <p class="painel-desc">Toque no time e depois nos jogadores que vão jogar nele.</p>
+      <p class="painel-desc">${dica}</p>
       <div class="pt-times pt-montagem">
         ${np.times.map((ids, t) => `
           <section class="pt-time pt-cor-${t} ${np.ativo === t ? 'pt-ativo' : ''}" data-np-time="${t}" role="button" tabindex="0" aria-pressed="${np.ativo === t}">
             <header class="pt-cab"><b>${NOMES_TIMES[t]}</b><span class="pt-qtd">${np.ativo === t ? '✓ selecionado' : `${ids.length} ${ids.length === 1 ? 'jogador' : 'jogadores'}`}</span></header>
-            <ul class="pt-chips">${ids.map(id => `<li>${esc(nomeDe(id))}<button data-np-tirar="${t}:${esc(id)}" aria-label="Tirar ${esc(nomeDe(id))}">×</button></li>`).join('') || '<li class="pt-vazio">Ninguém ainda</li>'}</ul>
+            <ul class="pt-chips">${ids.map(id => `<li class="${np.ativo !== t ? 'pt-movivel' : ''}" ${np.ativo !== t ? `data-np-mover="${t}:${esc(id)}" title="Trazer para o ${NOMES_TIMES[np.ativo]}"` : ''}>${esc(nomeDe(id))}<button data-np-tirar="${t}:${esc(id)}" aria-label="Tirar ${esc(nomeDe(id))}">×</button></li>`).join('') || '<li class="pt-vazio">Ninguém ainda</li>'}</ul>
           </section>`).join('')}
       </div>
       <section class="pt-pool">
@@ -702,8 +726,162 @@
         <input type="search" id="np-busca" placeholder="Buscar ou digitar nome novo" autocomplete="off" value="${esc(np.busca)}">
         <div id="np-lista"></div>
       </section>
-      <div class="adm-barra"><span class="espaco"></span><button class="btn btn-primario" id="btn-comecar-partida">Começar partida (${np.times.flat().length})</button></div>`;
+      <div class="adm-barra"><span class="espaco"></span>${botoes}</div>`;
     renderListaNP();
+  }
+
+  /* Sorteio: escolher quem joga e dividir em 4 times */
+  function renderSorteio() {
+    const so = st.sorteio;
+    $('#conteudo').innerHTML = `
+      <div class="adm-barra">
+        <button class="btn" id="btn-voltar-partidas">← Voltar</button>
+        <h2 class="adm-sub" style="margin:0">Sortear times</h2>
+        <label class="adm-data">Data <input type="date" id="so-data" value="${so.data}"></label>
+      </div>
+      <p class="painel-desc">Toque em quem vai jogar. Depois do sorteio dá para trocar jogadores antes de salvar.</p>
+      <section class="pt-pool">
+        <header class="pt-pool-cab"><b>Quem vai jogar</b><span class="pt-qtd" id="so-qtd"></span></header>
+        <input type="search" id="so-busca" placeholder="Buscar ou digitar nome novo" autocomplete="off" value="${esc(so.busca)}">
+        <div id="so-lista"></div>
+        <div class="pt-sorteio-opcoes">
+          <label><input type="checkbox" id="so-equilibrar" ${so.equilibrar ? 'checked' : ''}> Equilibrar (espalha os melhores pelo G+A por jogo)</label>
+          <button class="adm-link" id="btn-so-limpar" style="margin:0">Limpar seleção</button>
+        </div>
+      </section>
+      <div class="adm-barra"><span class="espaco"></span><button class="btn btn-primario" id="btn-sortear">🎲 Sortear 4 times</button></div>`;
+    renderListaSorteio();
+  }
+
+  function renderListaSorteio() {
+    const so = st.sorteio;
+    const busca = slug(so.busca);
+    const bate = j => !busca || slug(j.nome).includes(busca) || Object.entries(st.apelidos).some(([a, id]) => id === j.id && a.includes(busca));
+    const todos = [...st.jogadores, ...Object.entries(so.nomesNovos).map(([id, nome]) => ({ id, nome }))].filter(bate);
+    const escolhido = id => so.ids.includes(id);
+    const botoes = lista => lista.map(j => `<button class="pt-pick ${escolhido(j.id) ? 'pt-escolhido' : ''}" data-so-pick="${esc(j.id)}" aria-pressed="${escolhido(j.id)}">${escolhido(j.id) ? '✓ ' : ''}${esc(j.nome)}</button>`).join('');
+    const elenco = todos.filter(j => st.elenco.has(j.id));
+    const outros = todos.filter(j => !st.elenco.has(j.id));
+    const nomeBusca = limpar(so.busca);
+    const novo = nomeBusca && !resolver(nomeBusca) && slug(nomeBusca) && !so.nomesNovos[slug(nomeBusca)];
+    $('#so-lista').innerHTML = `
+      ${novo ? `<button class="pt-pick pt-pick-novo" id="so-novo">＋ Adicionar “${esc(nomeBusca)}” como jogador novo</button>` : ''}
+      ${elenco.length ? `<p class="pt-grupo">Elenco</p><div class="pt-picks">${botoes(elenco)}</div>` : ''}
+      ${outros.length ? `<p class="pt-grupo">Convidados e outros</p><div class="pt-picks">${botoes(outros)}</div>` : ''}
+      ${!todos.length && !novo ? '<p class="pt-vazio">Ninguém com esse nome.</p>' : ''}`;
+    $('#so-qtd').textContent = `${so.ids.length} selecionado${so.ids.length === 1 ? '' : 's'}`;
+    $('#btn-sortear').textContent = `🎲 Sortear 4 times (${so.ids.length})`;
+  }
+
+  // Divide em 4 times. Equilibrado: ordena pelo G+A por jogo (com um pouco de sorte) e distribui em "cobrinha".
+  function sortearTimes() {
+    const so = st.sorteio;
+    if (so.ids.length < 4) return toast('Escolha pelo menos 4 jogadores.');
+    const embaralhar = lista => lista.map(x => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+    let ordem = embaralhar(so.ids);
+    if (so.equilibrar) {
+      const nota = id => {
+        const e = so.stats[id];
+        return e && e.partidas ? (e.gols + e.assist) / e.partidas : 0;
+      };
+      ordem = ordem.map(id => [nota(id) * (0.85 + Math.random() * 0.3), id]).sort((a, b) => b[0] - a[0]).map(x => x[1]);
+    }
+    const times = [[], [], [], []];
+    ordem.forEach((id, i) => {
+      const volta = Math.floor(i / 4), pos = i % 4;
+      times[so.equilibrar && volta % 2 ? 3 - pos : pos].push(id);
+    });
+    st.novaPartida = { data: so.data, times, nomesNovos: { ...so.nomesNovos }, ativo: 0, busca: '', modo: 'agendar' };
+    renderNovaPartida();
+    toast('Times sorteados! Troque quem precisar e salve.');
+  }
+
+  // Insere jogadores novos que estão nos times
+  async function gravarNovosNP(np) {
+    const novos = Object.entries(np.nomesNovos).filter(([id]) => np.times.some(ids => ids.includes(id)) && !st.porId[id]).map(([id, nome]) => ({ id, nome }));
+    if (novos.length) {
+      ok(await sb.from('jogadores').insert(novos));
+      definirJogadores([...st.jogadores, ...novos]);
+    }
+  }
+
+  // Salva a próxima partida (agendada): cria ou regrava os times
+  async function salvarAgendada({ iniciar = false } = {}) {
+    const np = st.novaPartida;
+    if (np.times.filter(ids => ids.length).length < 2) return toast('Coloque jogadores em pelo menos 2 times.');
+    $$('#btn-salvar-agendada, #btn-iniciar-agendada').forEach(b => { b.disabled = true; });
+    try {
+      await gravarNovosNP(np);
+      let id = np.id;
+      if (id) {
+        ok(await sb.from('partidas').update({ data: np.data }).eq('id', id));
+        ok(await sb.from('partida_jogadores').delete().eq('partida_id', id));
+      } else {
+        id = ok(await sb.from('partidas').insert({ temporada_id: st.temporada, data: np.data, times_nomes: NOMES_TIMES, status: 'agendada' }).select('id').single()).id;
+      }
+      ok(await sb.from('partida_jogadores').insert(np.times.flatMap((ids, t) => ids.map(jogador_id => ({ partida_id: id, jogador_id, time: t + 1 })))));
+      st.novaPartida = null;
+      st.sorteio = null;
+      if (iniciar) {
+        ok(await sb.rpc('iniciar_partida', { p_id: id }));
+        st.partidaId = id;
+        toast('Partida começou! Anote os gols e assistências.');
+      } else {
+        toast('Próxima partida salva. Os times podem ser editados até iniciar.');
+      }
+      await renderPartidas();
+    } catch (e) {
+      console.error(e);
+      toast('Erro ao salvar: ' + erroLegivel(e));
+      $$('#btn-salvar-agendada, #btn-iniciar-agendada').forEach(b => { b.disabled = false; });
+    }
+  }
+
+  async function editarAgendada(id) {
+    const [p, jogs] = await Promise.all([
+      sb.from('partidas').select('id,data,status').eq('id', id).maybeSingle(),
+      sb.from('partida_jogadores').select('jogador_id,time').eq('partida_id', id),
+    ]).then(rs => rs.map(ok));
+    if (!p || p.status !== 'agendada') { toast('Essa partida não está mais agendada.'); return renderPartidas(); }
+    await carregarElenco().catch(() => {});
+    const times = [[], [], [], []];
+    for (const j of jogs) times[j.time - 1]?.push(j.jogador_id);
+    st.novaPartida = { id, data: p.data, times, nomesNovos: {}, ativo: 0, busca: '', modo: 'editar' };
+    renderNovaPartida();
+  }
+
+  async function iniciarAgendada(id) {
+    try {
+      ok(await sb.rpc('iniciar_partida', { p_id: id }));
+      st.partidaId = id;
+      toast('Partida começou! Anote os gols e assistências.');
+      await renderPartidas();
+    } catch (e) {
+      toast('Erro: ' + erroLegivel(e));
+    }
+  }
+
+  /* Confirmação em popup (promessa: true = confirmou) */
+  function confirmar(html, { sim = 'Confirmar', perigo = false } = {}) {
+    return new Promise(resolve => {
+      const modal = $('#modal-confirma');
+      $('#confirma-texto').innerHTML = html;
+      const btnSim = $('#btn-confirma-sim');
+      btnSim.textContent = sim;
+      btnSim.classList.toggle('btn-perigo-cheio', perigo);
+      btnSim.classList.toggle('btn-primario', !perigo);
+      const fim = ok => {
+        modal.hidden = true;
+        btnSim.onclick = $('#btn-confirma-nao').onclick = modal.onclick = document.onkeydown = null;
+        resolve(ok);
+      };
+      btnSim.onclick = () => fim(true);
+      $('#btn-confirma-nao').onclick = () => fim(false);
+      modal.onclick = e => { if (e.target === modal) fim(false); };
+      document.onkeydown = e => { if (e.key === 'Escape') fim(false); };
+      modal.hidden = false;
+      btnSim.focus();
+    });
   }
 
   function renderListaNP() {
@@ -812,7 +990,7 @@
       <h2 class="adm-sub">Lances (${evs.length})</h2>
       <ul class="adm-lista pt-lances">${evs.map(e => `
         <li><span class="grow">${hora(e.criado_em)} · ${e.tipo === 'gol' ? '⚽ Gol' : '👟 Assistência'} de <b>${esc(nome(e.jogador_id))}</b> <small style="color:var(--texto-3)">${esc(p.times_nomes[timeDe[e.jogador_id] - 1] || '')}</small></span>
-          <button class="btn btn-perigo" data-desfazer-lance="${e.id}">Desfazer</button></li>`).join('') || '<li>Nenhum lance ainda.</li>'}
+          <button class="btn btn-perigo" data-desfazer-lance="${e.id}" data-desfazer-txt="${e.tipo === 'gol' ? 'o <b>gol</b>' : 'a <b>assistência</b>'} de <b>${esc(nome(e.jogador_id))}</b> (${hora(e.criado_em)})">Desfazer</button></li>`).join('') || '<li>Nenhum lance ainda.</li>'}
       </ul>`;
     // outro adm pode estar anotando ao mesmo tempo
     clearInterval(st.pollPartida);
@@ -820,6 +998,9 @@
   }
 
   async function anotarLance(jogador_id, tipo, botao) {
+    const nome = esc(st.porId[jogador_id]?.nome || jogador_id);
+    const oQue = tipo === 'gol' ? 'um <b>gol</b>' : 'uma <b>assistência</b>';
+    if (!await confirmar(`Deseja realmente adicionar ${oQue} para <b>${nome}</b>?`, { sim: tipo === 'gol' ? '⚽ Adicionar gol' : '👟 Adicionar assist.' })) return;
     botao.disabled = true;
     try {
       ok(await sb.from('partida_eventos').insert({ partida_id: st.partidaId, jogador_id, tipo }));
@@ -1142,6 +1323,9 @@
     conteudo.addEventListener('input', e => {
       if (e.target.id === 'np-data') { st.novaPartida.data = e.target.value || hoje(); return; }
       if (e.target.id === 'np-busca') { st.novaPartida.busca = e.target.value; renderListaNP(); return; }
+      if (e.target.id === 'so-busca') { st.sorteio.busca = e.target.value; renderListaSorteio(); return; }
+      if (e.target.id === 'so-data') { st.sorteio.data = e.target.value || hoje(); return; }
+      if (e.target.id === 'so-equilibrar') { st.sorteio.equilibrar = e.target.checked; return; }
       const inp = e.target.closest('input[data-k]');
       if (!inp) return;
       const l = st.linhas[+inp.dataset.i];
@@ -1163,6 +1347,14 @@
         const opcoes = $$('#np-lista [data-np-pick], #np-novo');
         if (opcoes.length === 1 || $('#np-novo')) (opcoes.length === 1 ? opcoes[0] : $('#np-novo')).click();
       }
+      if (e.target.id === 'so-busca' && e.key === 'Enter') {
+        e.preventDefault();
+        const opcoes = $$('#so-lista [data-so-pick], #so-novo');
+        if (opcoes.length === 1 || $('#so-novo')) (opcoes.length === 1 ? opcoes[0] : $('#so-novo')).click();
+        st.sorteio.busca = '';
+        $('#so-busca').value = '';
+        renderListaSorteio();
+      }
       if (e.target.dataset.npTime != null && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); st.novaPartida.ativo = +e.target.dataset.npTime; renderNovaPartida(); }
     });
     conteudo.addEventListener('submit', e => {
@@ -1173,6 +1365,16 @@
     });
     conteudo.addEventListener('click', e => {
       const t = e.target.closest('button');
+      // tocar no nome de outro time traz o jogador para o time selecionado
+      const mover = e.target.closest('[data-np-mover]');
+      if (mover && !t) {
+        const [de, id] = mover.dataset.npMover.split(':');
+        const np = st.novaPartida;
+        np.times[+de] = np.times[+de].filter(x => x !== id);
+        np.times[np.ativo].push(id);
+        renderNovaPartida();
+        return;
+      }
       const cardTime = e.target.closest('[data-np-time]');
       if (cardTime && !t) { st.novaPartida.ativo = +cardTime.dataset.npTime; renderNovaPartida(); return; }
       if (!t) return;
@@ -1198,8 +1400,12 @@
         st.novaPartida = { data: hoje(), times: [[], [], [], []], nomesNovos: {}, ativo: 0, busca: '' };
         carregarElenco().catch(() => {}).then(renderPartidas);
       } else if (t.id === 'btn-voltar-partidas') {
-        if (st.novaPartida && st.novaPartida.times.some(ids => ids.length) && !confirm('Descartar os times montados?')) return;
+        // dos times sorteados volta para a escolha de quem joga (a seleção fica)
+        if (st.novaPartida?.modo === 'agendar') { st.novaPartida = null; renderPartidas(); return; }
+        if (st.novaPartida && st.novaPartida.modo !== 'editar' && st.novaPartida.times.some(ids => ids.length) && !confirm('Descartar os times montados?')) return;
+        if (!st.novaPartida && st.sorteio?.ids.length && !confirm('Descartar a seleção do sorteio?')) return;
         st.novaPartida = null;
+        st.sorteio = null;
         st.partidaId = null;
         renderPartidas();
       } else if (t.dataset.npPick) addJogadorNP(t.dataset.npPick);
@@ -1213,9 +1419,45 @@
       else if (t.dataset.relatorioPartida) abrirRelatorioPartida(st.partidasLista[t.dataset.relatorioPartida].resumo);
       else if (t.dataset.lance) anotarLance(t.dataset.jogador, t.dataset.lance, t);
       else if (t.dataset.desfazerLance) {
-        t.disabled = true;
-        sb.from('partida_eventos').delete().eq('id', +t.dataset.desfazerLance)
-          .then(ok).then(renderPartidaAoVivo).catch(err => toast('Erro: ' + erroLegivel(err)));
+        confirmar(`Deseja realmente desfazer ${t.dataset.desfazerTxt}?`, { sim: 'Desfazer', perigo: true }).then(sim => {
+          if (!sim) return;
+          t.disabled = true;
+          sb.from('partida_eventos').delete().eq('id', +t.dataset.desfazerLance)
+            .then(ok).then(renderPartidaAoVivo).catch(err => toast('Erro: ' + erroLegivel(err)));
+        });
+      }
+      // Sorteio e próxima partida
+      else if (t.id === 'btn-sorteio') {
+        st.sorteio = { data: hoje(), ids: [], nomesNovos: {}, busca: '', equilibrar: true, stats: {} };
+        Promise.all([
+          carregarElenco().catch(() => {}),
+          sb.from('estatisticas_temporada').select('jogador_id,partidas,gols,assist').eq('temporada_id', st.temporada).then(ok)
+            .then(rows => { st.sorteio.stats = Object.fromEntries(rows.map(r => [r.jogador_id, r])); }).catch(() => {}),
+        ]).then(renderPartidas);
+      } else if (t.dataset.soPick) {
+        const so = st.sorteio, id = t.dataset.soPick;
+        so.ids = so.ids.includes(id) ? so.ids.filter(x => x !== id) : [...so.ids, id];
+        renderListaSorteio();
+      } else if (t.id === 'so-novo') {
+        const nome = limpar(st.sorteio.busca), id = slug(nome);
+        st.sorteio.nomesNovos[id] = nome;
+        if (!st.sorteio.ids.includes(id)) st.sorteio.ids.push(id);
+        st.sorteio.busca = '';
+        $('#so-busca').value = '';
+        renderListaSorteio();
+      } else if (t.id === 'btn-so-limpar') { st.sorteio.ids = []; renderListaSorteio(); }
+      else if (t.id === 'btn-sortear') sortearTimes();
+      else if (t.id === 'btn-sortear-de-novo') { st.novaPartida = null; sortearTimes(); }
+      else if (t.id === 'btn-salvar-agendada') salvarAgendada();
+      else if (t.id === 'btn-iniciar-agendada') salvarAgendada({ iniciar: true });
+      else if (t.dataset.editarAgendada) editarAgendada(+t.dataset.editarAgendada);
+      else if (t.dataset.iniciarAgendada) {
+        confirmar('Iniciar a partida sorteada agora?', { sim: 'Iniciar' }).then(sim => sim && iniciarAgendada(+t.dataset.iniciarAgendada));
+      } else if (t.id === 'btn-cancelar-agendada') {
+        if (!confirm('Cancelar a próxima partida? Os times sorteados são descartados.')) return;
+        sb.rpc('cancelar_partida', { p_id: st.novaPartida.id }).then(ok)
+          .then(() => { st.novaPartida = null; toast('Próxima partida cancelada.'); return renderPartidas(); })
+          .catch(err => toast('Erro: ' + erroLegivel(err)));
       } else if (t.id === 'btn-atualizar-partida') renderPartidaAoVivo();
       else if (t.id === 'btn-encerrar-partida') encerrarPartida();
       else if (t.id === 'btn-cancelar-partida') {

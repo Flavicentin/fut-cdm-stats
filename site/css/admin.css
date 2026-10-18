@@ -81,6 +81,21 @@
   .pt-mais { min-width: 52px; min-height: 44px; font-size: 15px; }
   .pt-placar { font-size: 44px; }
 }
+.adm-confirma { max-width: 360px; text-align: center; }
+.adm-confirma-texto { margin: 4px 0 18px; font-size: 17px; line-height: 1.35; }
+.adm-confirma-texto b { color: var(--acento); }
+.adm-confirma-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.adm-confirma-botoes .btn { justify-content: center; min-height: 48px; font-size: 15px; }
+.btn-perigo-cheio { background: #d64545; border-color: #d64545; color: #fff; font-weight: 700; }
+.btn-perigo-cheio:hover { color: #fff; filter: brightness(1.08); }
+
+/* Sorteio */
+.pt-pick.pt-escolhido { background: var(--acento); border-color: var(--acento); color: #04150a; }
+.pt-sorteio-opcoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 8px 0 0; font-size: 14px; color: var(--texto-2); }
+.pt-sorteio-opcoes label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.pt-chips li.pt-movivel { cursor: pointer; }
+.pt-chips li.pt-movivel:hover { outline: 1px solid var(--acento); }
+.adm-tag-agendada { background: color-mix(in srgb, var(--ouro) 18%, transparent); color: var(--ouro); }
 .adm-modal-rodape { display: flex; justify-content: space-between; gap: 12px; margin-top: 4px; }
 .adm-msg { margin: 12px 0 0; font-size: 14px; color: var(--texto-2); min-height: 1.2em; }
 .adm-msg.erro, .adm-erro { color: #d64545; }

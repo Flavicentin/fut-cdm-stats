@@ -124,6 +124,17 @@
     </div>
   </div>
 
+  <!-- CONFIRMAÇÃO (lances da partida) -->
+  <div class="adm-modal" id="modal-confirma" hidden>
+    <div class="adm-modal-caixa adm-confirma" role="alertdialog" aria-modal="true" aria-labelledby="confirma-texto">
+      <p class="adm-confirma-texto" id="confirma-texto"></p>
+      <div class="adm-confirma-botoes">
+        <button class="btn" type="button" id="btn-confirma-nao">Cancelar</button>
+        <button class="btn btn-primario" type="button" id="btn-confirma-sim">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
