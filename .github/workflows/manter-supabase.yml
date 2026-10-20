@@ -1,0 +1,30 @@
+# Mantém o Supabase acordado: no plano gratuito o projeto é pausado depois de ~7 dias sem uso.
+# Duas vezes por semana faz uma leitura simples no banco (a mesma que o site faz).
+# A URL e a chave publishable vêm de site/js/config.js (a chave já é pública: só lê o que a RLS libera).
+name: Manter Supabase ativo
+
+on:
+  schedule:
+    - cron: '0 12 * * 1,4'   # segunda e quinta, 9h de Brasília
+  workflow_dispatch:          # botão "Run workflow" para rodar na mão
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Consultar o banco
+        run: |
+          URL=$(grep -oP "supabaseUrl:\s*'\K[^']+" site/js/config.js)
+          KEY=$(grep -oP "supabaseKey:\s*'\K[^']+" site/js/config.js)
+          resposta=$(curl -sS --retry 3 --retry-delay 10 -w '\n%{http_code}' \
+            -H "apikey: $KEY" "$URL/rest/v1/v_temporadas?select=temporada,atualizado_em")
+          codigo=$(echo "$resposta" | tail -n1)
+          echo "HTTP $codigo"
+          echo "$resposta" | head -n -1
+          if [ "$codigo" != "200" ]; then
+            echo "::error::O Supabase respondeu $codigo (o projeto pode estar pausado)."
+            exit 1
+          fi
