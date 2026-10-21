@@ -1,7 +1,21 @@
-
-# Fotos dos jogadores: vão para o Supabase Storage pelo admin, não para o repositório
+# Fotos dos jogadores: vão para o Supabase Storage pelo admin (aba Fotos), não para o repositório
 site/data/*.jpg
 site/data/*.jpeg
 site/data/*.png
 site/data/*.webp
 site/data/*.heic
+
+# Configuração local do editor / Claude Code
+.claude/
+.vscode/
+
+# Python, sistema e segredos
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+.env
+.env.*
+.vercel

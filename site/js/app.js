@@ -418,6 +418,48 @@
     return b;
   }
 
+  // Dados do cartão de exportação (imagem/PDF), no formato que o exportar.js desenha
+  function dadosExportacao(j) {
+    const temJogos = j.partidas > 0;
+    const [ano, mes, dia] = state.atualizado.split('-');
+    const primeiros = METRICAS.filter(m => j.ranks[m.id] === 1).map(m => m.rotulo);
+    return {
+      id: j.id,
+      nome: j.nome,
+      iniciais: iniciais(j.nome),
+      foto: j.foto || null,
+      temporada: state.temporada,
+      sub: temJogos ? `${POSICOES[j.pos]} · ${j.ga ? Math.round(j.gols / j.ga * 100) : 0}% do G+A em gols` : 'Sem jogos registrados na temporada',
+      destaque: primeiros.length ? `1º em ${primeiros.slice(0, 3).join(', ')}` : '',
+      nums: [['gols', 'Gols'], ['assist', 'Assistências'], ['ga', 'G+A'], ['partidas', 'Jogos'], ['gpj', 'Gols/jogo'], ['gapj', 'G+A/jogo']]
+        .map(([k, rotulo]) => ({ rotulo, valor: temJogos ? MET[k].fmt(MET[k].val(j)) : '—', pos: temJogos ? j.ranks[k] : null })),
+      honrasS: HONRAS.filter(h => h.g === 's' && honra(j, h.k)).map(h => ({ ic: h.ic, nome: h.nome, n: honra(j, h.k) })),
+      honrasM: HONRAS.filter(h => h.g === 'm' && honra(j, h.k)).map(h => ({ ic: h.ic, nome: h.nome, n: honra(j, h.k) })),
+      meses: state.meses.map((m, i) => ({ rotulo: curtoMes(m.mes), g: j.porMes[i]?.gols || 0, a: j.porMes[i]?.assist || 0 })),
+      over: j.over ? { ovr: j.over.ovr ?? null, notas: NOTAS.map(([sigla, , k]) => ({ sigla, v: j.over[k] ?? null })) } : null,
+      site: location.host || 'fut-cdm.vercel.app',
+      atualizado: `${dia}/${mes}/${ano}`,
+    };
+  }
+
+  async function exportarPerfil(id, formato, botao) {
+    const j = state.porId[id];
+    if (!j || !window.Exportar) return;
+    const texto = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = 'Gerando…';
+    try {
+      const r = await Exportar[formato](dadosExportacao(j));
+      if (r === 'baixado') toast(formato === 'pdf' ? 'PDF baixado 📄' : 'Imagem baixada 📸');
+    } catch (e) {
+      console.error(e);
+      toast('Não foi possível gerar. Tente de novo.');
+    } finally {
+      botao.disabled = false;
+      botao.textContent = texto;
+    }
+  }
+
   function abrirPerfil(id) {
     const j = state.porId[id];
     if (!j) return;
@@ -450,6 +492,8 @@
           <div class="badges">${temJogos ? conquistas(j).map(([c, t]) => `<span class="badge ${c}">${t}</span>`).join('') : ''}</div>
           <div class="perfil-acoes">
             <a class="btn" href="#comparar/${j.id}/${(state.b && state.b !== j.id ? state.b : rival(j.id))}">⚔️ Comparar com alguém</a>
+            <button class="btn" data-exportar="imagem" data-jogador="${j.id}">📸 Exportar imagem</button>
+            <button class="btn" data-exportar="pdf" data-jogador="${j.id}">📄 Exportar PDF</button>
           </div>
         </div>
       </div>
@@ -798,6 +842,8 @@
     });
     // Alterna G+A / Gols / Assist. no mês a mês do perfil (o conteúdo do modal é recriado a cada perfil)
     $('#perfil').addEventListener('click', e => {
+      const exp = e.target.closest('[data-exportar]');
+      if (exp) return exportarPerfil(exp.dataset.jogador, exp.dataset.exportar, exp);
       const b = e.target.closest('[data-pm]');
       if (!b) return;
       state.perfilMet = b.dataset.pm;
