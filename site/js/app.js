@@ -9,6 +9,11 @@
   const int = v => String(Math.round(v));
   const dec = v => v.toFixed(1).replace('.', ',');
   const ord = n => n ? `${n}º` : '—';
+  // "Caio Hideki" -> "CH", "Roger" -> "RO" (aparece enquanto não há foto)
+  const iniciais = nome => {
+    const p = nome.trim().split(/\s+/);
+    return (p.length > 1 ? p[0][0] + p.at(-1)[0] : nome.slice(0, 2)).toUpperCase();
+  };
 
   const MIN_JOGOS = 10;   // mesmo critério dos adms para as médias
 
@@ -433,6 +438,10 @@
 
     $('#perfil').innerHTML = `
       <div class="perfil-cab">
+        <div class="perfil-foto" aria-hidden="true">
+          <span>${esc(iniciais(j.nome))}</span>
+          ${j.foto ? `<img src="${esc(j.foto)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
+        </div>
         <div class="perfil-info">
           <p class="kicker">Temporada ${state.temporada}</p>
           <h2 id="perfil-nome">${esc(j.nome)}</h2>

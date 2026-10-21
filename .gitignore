@@ -1,0 +1,7 @@
+
+# Fotos dos jogadores: vão para o Supabase Storage pelo admin, não para o repositório
+site/data/*.jpg
+site/data/*.jpeg
+site/data/*.png
+site/data/*.webp
+site/data/*.heic

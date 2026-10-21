@@ -282,7 +282,7 @@
   async function carregarBase() {
     const [temporadas, jogadores, apelidos, tipos] = await Promise.all([
       sb.from('temporadas').select('id').order('id', { ascending: false }),
-      sb.from('jogadores').select('id,nome').order('nome'),
+      sb.from('jogadores').select('id,nome,foto').order('nome'),
       sb.from('apelidos').select('slug,jogador_id'),
       sb.from('tipos_honraria').select('id,grupo,nome,icone,descricao').order('ordem'),
     ]).then(rs => rs.map(ok));
@@ -459,7 +459,7 @@
     $$('#abas .aba').forEach(b => b.classList.toggle('ativa', b.dataset.aba === aba));
     const conteudo = $('#conteudo');
     clearInterval(st.pollPartida);
-    if (!st.temporada && aba !== 'admins' && aba !== 'revisoes') {
+    if (!st.temporada && !['admins', 'revisoes', 'fotos'].includes(aba)) {
       conteudo.innerHTML = '<p class="adm-vazio">Nenhuma temporada cadastrada. Crie uma acima.</p>';
       return;
     }
@@ -468,6 +468,7 @@
       if (aba === 'admins') return await renderAdmins();
       if (aba === 'revisoes') return await renderRevisoes();
       if (aba === 'partidas') return await renderPartidas();
+      if (aba === 'fotos') return await renderFotos();
       await carregarElenco();
       st.linhas = (await ABAS[aba].carregar()).sort(porNome);
       // foto do que está gravado, para montar o resumo da alteração
@@ -644,6 +645,94 @@
     } catch (e) {
       toast('Erro: ' + erroLegivel(e));
     }
+  }
+
+  /* ---------------- Fotos ---------------- */
+  const BUCKET_FOTOS = 'fotos-jogadores';
+  const iniciaisDe = nome => {
+    const p = nome.trim().split(/\s+/);
+    return (p.length > 1 ? p[0][0] + p.at(-1)[0] : nome.slice(0, 2)).toUpperCase();
+  };
+  const avatar = j => `<span class="ft-avatar"><span>${esc(iniciaisDe(j.nome))}</span>${j.foto ? `<img src="${esc(j.foto)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
+
+  // "caio_pcd.jpeg" -> caio (apelido); "leozitus__leo.jpeg" -> tenta "leozitus" e depois "leo"
+  function jogadorDoArquivo(nomeArquivo) {
+    const base = nomeArquivo.replace(/\.[^.]+$/, '');
+    for (const c of [base, ...base.split(/__+/)]) {
+      const id = resolver(c.replace(/_/g, ' '));
+      if (id) return id;
+    }
+    return '';
+  }
+
+  // Reduz para no máximo 640px e regrava em JPEG (fotos de celular viram ~60–120 KB)
+  async function reduzirImagem(file, max = 640) {
+    const img = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const escala = Math.min(1, max / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * escala);
+    canvas.height = Math.round(img.height * escala);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    return new Promise((ok, falha) => canvas.toBlob(b => (b ? ok(b) : falha(new Error('Não foi possível ler a imagem'))), 'image/jpeg', 0.85));
+  }
+
+  async function enviarFoto(id, file) {
+    const blob = await reduzirImagem(file);
+    const caminho = `${id}.jpg`;
+    ok(await sb.storage.from(BUCKET_FOTOS).upload(caminho, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' }));
+    const url = `${sb.storage.from(BUCKET_FOTOS).getPublicUrl(caminho).data.publicUrl}?v=${Date.now()}`;
+    ok(await sb.from('jogadores').update({ foto: url }).eq('id', id));
+    if (st.porId[id]) st.porId[id].foto = url;
+  }
+
+  async function removerFoto(id) {
+    ok(await sb.storage.from(BUCKET_FOTOS).remove([`${id}.jpg`]));
+    ok(await sb.from('jogadores').update({ foto: null }).eq('id', id));
+    if (st.porId[id]) st.porId[id].foto = null;
+  }
+
+  async function renderFotos() {
+    if (st.temporada) await carregarElenco().catch(() => {});
+    const lote = st.fotosLote || [];
+    const opcoes = selecionado => `<option value="">— escolha o jogador —</option>` +
+      st.jogadores.map(j => `<option value="${esc(j.id)}" ${j.id === selecionado ? 'selected' : ''}>${esc(j.nome)}</option>`).join('');
+    const ordenados = [...st.jogadores].sort((a, b) => (st.elenco.has(b.id) - st.elenco.has(a.id)) || a.nome.localeCompare(b.nome, 'pt'));
+    const comFoto = st.jogadores.filter(j => j.foto).length;
+    $('#conteudo').innerHTML = `
+      <p class="painel-desc">A foto aparece no perfil do jogador no site. Escolha várias de uma vez: o nome do arquivo é ligado ao jogador sozinho (apelidos valem). As fotos são reduzidas antes de subir.</p>
+      <section class="adm-varios">
+        <label for="fotos-arquivos"><b>Enviar várias fotos</b> (nome do arquivo = nome do jogador, ex.: roger.jpeg, caio_pcd.jpeg)</label>
+        <input type="file" id="fotos-arquivos" accept="image/*" multiple>
+        ${lote.length ? `
+        <div class="adm-tabela-box" style="margin-top:10px">
+          <table class="adm-tabela ft-lote">
+            <thead><tr><th>Foto</th><th>Arquivo</th><th>Jogador</th><th></th></tr></thead>
+            <tbody>${lote.map((f, i) => `
+              <tr class="${f.status === 'ok' ? 'ft-ok' : f.status === 'erro' ? 'ft-erro' : ''}">
+                <td><img class="ft-previa" src="${f.previa}" alt=""></td>
+                <td>${esc(f.file.name)}</td>
+                <td><select data-lote="${i}" ${f.status === 'ok' ? 'disabled' : ''}>${opcoes(f.id)}</select></td>
+                <td>${f.status === 'ok' ? '✅' : f.status === 'erro' ? `⚠️ ${esc(f.erro)}` : f.status === 'enviando' ? '…' : `<button class="remover" data-lote-tirar="${i}" aria-label="Tirar">×</button>`}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="adm-barra">
+          <span class="adm-sujo">${lote.filter(f => !f.id && f.status !== 'ok').length ? `${lote.filter(f => !f.id && f.status !== 'ok').length} sem jogador escolhido` : ''}</span>
+          <span class="espaco"></span>
+          <button class="btn" id="btn-lote-limpar">Limpar</button>
+          <button class="btn btn-primario" id="btn-lote-enviar">Enviar ${lote.filter(f => f.id && f.status !== 'ok').length} foto(s)</button>
+        </div>` : ''}
+      </section>
+      <h2 class="adm-sub">Jogadores · ${comFoto} com foto</h2>
+      <ul class="adm-lista ft-lista">${ordenados.map(j => `
+        <li>
+          ${avatar(j)}
+          <span class="grow">${esc(j.nome)}${st.elenco.has(j.id) ? '' : ' <small style="color:var(--texto-3)">convidado</small>'}</span>
+          <label class="btn ft-trocar">${j.foto ? 'Trocar' : 'Pôr foto'}<input type="file" accept="image/*" data-foto-de="${esc(j.id)}" hidden></label>
+          ${j.foto ? `<button class="btn btn-perigo" data-foto-remover="${esc(j.id)}">Remover</button>` : ''}
+        </li>`).join('')}
+      </ul>`;
   }
 
   /* ---------------- Partidas ---------------- */
@@ -1332,6 +1421,22 @@
         st.mes = e.target.value;
         abrirAba('mes');
       }
+      // Fotos: várias de uma vez
+      if (e.target.id === 'fotos-arquivos') {
+        st.fotosLote = [...(st.fotosLote || []), ...[...e.target.files].map(file => ({
+          file, previa: URL.createObjectURL(file), id: jogadorDoArquivo(file.name), status: '',
+        }))];
+        renderFotos();
+      }
+      if (e.target.dataset.lote != null) { st.fotosLote[+e.target.dataset.lote].id = e.target.value; renderFotos(); }
+      // Fotos: trocar a de um jogador
+      if (e.target.dataset.fotoDe && e.target.files[0]) {
+        const id = e.target.dataset.fotoDe;
+        toast('Enviando foto…');
+        enviarFoto(id, e.target.files[0])
+          .then(() => { toast(`Foto de ${st.porId[id]?.nome || id} salva.`); return renderFotos(); })
+          .catch(err => toast('Erro ao enviar: ' + erroLegivel(err)));
+      }
     });
     conteudo.addEventListener('keydown', e => {
       if (e.target.id === 'add-nome' && e.key === 'Enter') { e.preventDefault(); adicionarJogador(); }
@@ -1418,6 +1523,27 @@
           t.disabled = true;
           sb.from('partida_eventos').delete().eq('id', +t.dataset.desfazerLance)
             .then(ok).then(renderPartidaAoVivo).catch(err => toast('Erro: ' + erroLegivel(err)));
+        });
+      }
+      // Fotos
+      else if (t.dataset.loteTirar != null) { st.fotosLote.splice(+t.dataset.loteTirar, 1); renderFotos(); }
+      else if (t.id === 'btn-lote-limpar') { st.fotosLote = []; renderFotos(); }
+      else if (t.id === 'btn-lote-enviar') {
+        (async () => {
+          for (const f of st.fotosLote.filter(x => x.id && x.status !== 'ok')) {
+            f.status = 'enviando';
+            renderFotos();
+            try { await enviarFoto(f.id, f.file); f.status = 'ok'; } catch (err) { f.status = 'erro'; f.erro = erroLegivel(err); }
+          }
+          await renderFotos();
+          const okN = st.fotosLote.filter(x => x.status === 'ok').length, erroN = st.fotosLote.filter(x => x.status === 'erro').length;
+          toast(`${okN} foto(s) salva(s)${erroN ? `, ${erroN} com erro` : ''}.`);
+        })();
+      } else if (t.dataset.fotoRemover) {
+        const id = t.dataset.fotoRemover;
+        confirmar(`Remover a foto de <b>${esc(st.porId[id]?.nome || id)}</b>?`, { sim: 'Remover', perigo: true }).then(sim => {
+          if (!sim) return;
+          removerFoto(id).then(() => { toast('Foto removida.'); return renderFotos(); }).catch(err => toast('Erro: ' + erroLegivel(err)));
         });
       }
       // Sorteio e próxima partida
