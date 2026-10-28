@@ -37,5 +37,17 @@ window.Db = (() => {
     }
   }
 
-  return { carregarTemporada };
+  // Futs encerrados da temporada (view pública v_futs). Sem Supabase: lista vazia (a seção some).
+  async function carregarFuts(temporada) {
+    try {
+      const r = await fetch(`${supabaseUrl}/rest/v1/v_futs?select=id,data,resumo&temporada=eq.${encodeURIComponent(temporada)}&order=data.desc`, {
+        headers: { apikey: supabaseKey },
+      });
+      return r.ok ? await r.json() : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return { carregarTemporada, carregarFuts };
 })();

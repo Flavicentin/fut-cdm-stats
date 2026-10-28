@@ -454,6 +454,7 @@
   }
 
   async function abrirAba(aba) {
+    if (aba !== st.aba) st.ordem = null;
     st.aba = aba;
     st.avisos = [];
     $$('#abas .aba').forEach(b => b.classList.toggle('ativa', b.dataset.aba === aba));
@@ -1163,9 +1164,61 @@
   }
 
   /* ---------------- Grade ---------------- */
+  // Valor da célula para ordenar/exportar: honraria zerada e nota vazia contam como vazio
+  const valorCelula = (l, c) => { const v = l.v[c.k]; return v == null || (c.h && !v) ? null : v; };
+
+  function ordenarLinhas(cols) {
+    const o = st.ordem;
+    if (!o || (o.k !== 'nome' && !cols.some(c => c.k === o.k))) return st.linhas.sort(porNome);
+    const c = cols.find(x => x.k === o.k);
+    st.linhas.sort((x, y) => {
+      if (o.k === 'nome') return porNome(x, y) * o.dir;
+      const vx = valorCelula(x, c), vy = valorCelula(y, c);
+      if (vx == null || vy == null) return (vx == null) - (vy == null) || porNome(x, y); // vazios sempre no fim
+      return (vx - vy) * o.dir || porNome(x, y);
+    });
+  }
+
+  // "Leozito: PAC 85 · FIN 86 · ..." (só o que tem valor)
+  const linhaTexto = (l, cols) => `${l.nome}: ${cols.map(c => [c.r, valorCelula(l, c)]).filter(([, v]) => v != null).map(([r, v]) => `${r} ${v}`).join(' · ') || 'sem números'}`;
+
+  const tituloGrade = () => st.aba === 'mes' ? `${NOME_MES[+st.mes.slice(5, 7)]} ${st.mes.slice(0, 4)}` : `${ABAS[st.aba].csv} · temporada ${st.temporada}`;
+
+  async function copiarTexto(texto, msg) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      toast(msg);
+    } catch {
+      abrirTexto(texto, { kicker: 'Copiar', titulo: 'Texto', desc: 'Não consegui copiar sozinho: selecione e copie.' });
+    }
+  }
+
+  function relatorioGrade() {
+    const cols = ABAS[st.aba].cols();
+    const linhas = st.linhas.filter(l => cols.some(c => valorCelula(l, c)));
+    return [`*Fut CDM · ${tituloGrade()}*`, '', ...linhas.map((l, i) => `${i + 1}. ${linhaTexto(l, cols)}`)].join('\n');
+  }
+
+  // Planilha .csv que o Excel (pt-BR) abre direto: separador ";" e BOM para os acentos
+  function baixarPlanilha() {
+    const cols = ABAS[st.aba].cols();
+    const cel = x => /[;"\n]/.test(String(x)) ? `"${String(x).replace(/"/g, '""')}"` : String(x);
+    const linhas = [['Jogador', ...cols.map(c => c.t || c.r)], ...st.linhas.map(l => [l.nome, ...cols.map(c => valorCelula(l, c) ?? '')])];
+    const blob = new Blob(['﻿' + linhas.map(r => r.map(cel).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `fut-cdm-${st.aba}-${st.aba === 'mes' ? st.mes : st.temporada}.csv`;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
   function renderGrade() {
     const a = ABAS[st.aba];
     const cols = a.cols();
+    ordenarLinhas(cols);
+    const seta = k => st.ordem?.k === k ? (st.ordem.dir > 0 ? ' ▲' : ' ▼') : '';
     const seletorMes = st.aba === 'mes' ? `
       <select id="sel-mes" aria-label="Mês">
         ${[...new Set([...st.meses, st.mes])].sort().map(m => `<option value="${m}" ${m === st.mes ? 'selected' : ''}>${NOME_MES[+m.slice(5, 7)]} ${m.slice(0, 4)}${st.meses.includes(m) ? '' : ' (novo)'}</option>`).join('')}
@@ -1210,13 +1263,19 @@
         <button class="btn btn-primario" id="btn-salvar" ${st.pendente ? 'disabled' : ''}>${st.pendente ? 'Aguardando revisão' : 'Enviar para revisão'}</button>
       </div>
       ${listaVarios}
+      ${st.linhas.length ? `<div class="adm-barra adm-exportar">
+        <small>Clique no título da coluna para ordenar.</small>
+        <span class="espaco"></span>
+        <button class="btn" id="btn-grade-planilha">⬇️ Baixar planilha</button>
+        <button class="btn" id="btn-grade-whats">💬 Copiar relatório</button>
+      </div>` : ''}
       <div class="adm-tabela-box">
         ${st.linhas.length ? `
         <table class="adm-tabela">
-          <thead><tr><th>Jogador</th>${cols.map(c => `<th title="${esc(c.t || c.r)}" class="${c.g === 'm' ? 'grupo-m' : ''}">${esc(c.r)}</th>`).join('')}</tr></thead>
+          <thead><tr><th class="ordenavel" data-ordenar="nome">Jogador${seta('nome')}</th>${cols.map(c => `<th title="${esc(c.t || c.r)} · clique para ordenar" class="ordenavel ${c.g === 'm' ? 'grupo-m' : ''}" data-ordenar="${c.k}">${esc(c.r)}${seta(c.k)}</th>`).join('')}</tr></thead>
           <tbody>${st.linhas.map((l, i) => `
             <tr class="${l.novo ? 'novo' : l.convidado ? 'convidado' : ''}">
-              <td>${a.podeRemover ? `<button class="remover" data-remover="${i}" aria-label="Remover ${esc(l.nome)}" title="Remover ${esc(l.nome)}">×</button>` : ''}${esc(l.nome)}</td>
+              <td>${a.podeRemover ? `<button class="remover" data-remover="${i}" aria-label="Remover ${esc(l.nome)}" title="Remover ${esc(l.nome)}">×</button>` : ''}${esc(l.nome)}<button class="copiar-linha" data-copiar="${i}" aria-label="Copiar números de ${esc(l.nome)}" title="Copiar números de ${esc(l.nome)}">📋</button></td>
               ${cols.map(c => {
                 const v = l.v[c.k];
                 const mostra = v == null || (c.h && !v) ? '' : v;
@@ -1463,6 +1522,14 @@
       acaoAdmin(async () => ok(await sb.from('convites_admin').insert({ email })), `${email} convidado.`);
     });
     conteudo.addEventListener('click', e => {
+      const th = e.target.closest('th[data-ordenar]');
+      if (th) {
+        const k = th.dataset.ordenar;
+        // primeiro clique: nome A→Z, números do maior para o menor; segundo clique inverte
+        st.ordem = st.ordem?.k === k ? { k, dir: -st.ordem.dir } : { k, dir: k === 'nome' ? 1 : -1 };
+        renderGrade();
+        return;
+      }
       const t = e.target.closest('button');
       // tocar no nome de outro time traz o jogador para o time selecionado
       const mover = e.target.closest('[data-np-mover]');
@@ -1590,6 +1657,15 @@
         st.mes = m;
         st.mesNovo = !st.meses.includes(m);
         abrirAba('mes');
+      } else if (t.id === 'btn-grade-planilha') baixarPlanilha();
+      else if (t.id === 'btn-grade-whats') {
+        abrirTexto(relatorioGrade(), {
+          kicker: tituloGrade(), titulo: 'Relatório da tabela',
+          desc: 'Na ordem em que a tabela está. Copie e cole no grupo, ou abra direto no WhatsApp. Mostra o que está na tela, mesmo antes da revisão.',
+        });
+      } else if (t.dataset.copiar != null) {
+        const l = st.linhas[+t.dataset.copiar];
+        copiarTexto(linhaTexto(l, ABAS[st.aba].cols()), `Copiado: ${l.nome}`);
       } else if (t.dataset.remover != null) {
         const l = st.linhas[+t.dataset.remover];
         if (st.aba === 'temporada' && st.original.has(l.id)

@@ -167,3 +167,10 @@
 .adm-sub { font-family: var(--fonte-titulo); font-size: 26px; margin: 24px 0 8px; }
 .adm-conf { margin-top: 16px; font-size: 13px; color: var(--texto-2); }
 .adm-conf summary { cursor: pointer; font-weight: 600; }
+
+/* Grade: ordenar, exportar, copiar linha */
+.adm-tabela th.ordenavel { cursor: pointer; user-select: none; }
+.adm-tabela th.ordenavel:hover { color: var(--acento); }
+.adm-exportar small { color: var(--texto-3); }
+.adm-tabela .copiar-linha { border: 0; background: none; padding: 0 0 0 6px; font-size: 13px; cursor: pointer; opacity: .45; vertical-align: 0; }
+.adm-tabela .copiar-linha:hover { opacity: 1; }

@@ -102,6 +102,10 @@
     histSel: [],
     perfilMet: 'ga',
     perfilId: null,
+    mesMet: 'ga',      // ranking do mês: ga | gols | assist
+    futs: [],          // futs encerrados (v_futs), do mais novo para o mais antigo
+    fut: null,
+    futMet: 'ga',
     a: null,
     b: null,
     modo: 'numeros',
@@ -122,6 +126,8 @@
     state.regulares = state.comJogos.filter(j => j.partidas >= MIN_JOGOS);
     state.meses = dados.meses || [];
     state.mes = state.meses.at(-1)?.mes;
+    state.futs = await Db.carregarFuts(state.temporada);
+    state.fut = state.futs[0]?.id ?? null;
     // série mês a mês de cada jogador do elenco
     for (const j of state.jogadores) j.porMes = state.meses.map(m => m.jogadores.find(i => i.id === j.id) || { gols: 0, assist: 0 });
     calcularRanks();
@@ -329,11 +335,122 @@
       card('🎁', 'Garçom do mês', top(i => i.assist), 'assistências'),
     ].join('').replace(/<b class="num">1<\/b> <\/span>/g, '<b class="num">✓</b></span>');
 
-    const rs = topPor(itens.map(pessoa), p => p._i.ga).slice(0, 12);
+    const rs = rankingMes();
     const max = rs[0]?.valor || 1;
     $('#mes-ranking').innerHTML = rs.map((r, i) =>
-      itemRanking(r, i, max, int, `${r.j._i.gols}G · ${r.j._i.assist}A${r.j.convidado ? ' · convidado' : ''}`, !r.j.convidado)).join('');
-    $('#mes-titulo').textContent = `G+A em ${nomeMes(state.mes)}`;
+      itemRanking(r, i, max, int, `${r.j._i.gols}G · ${r.j._i.assist}A${r.j.convidado ? ' · convidado' : ''}`, !r.j.convidado)).join('')
+      || '<li class="rank-vazio">Ninguém pontuou nesse quesito ainda.</li>';
+    $('#mes-titulo').textContent = `${ROTULO_MET[state.mesMet]} em ${nomeMes(state.mes)}`;
+  }
+
+  const ROTULO_MET = { ga: 'G+A', gols: 'Gols', assist: 'Assistências' };
+
+  // Ranking do mês aberto na métrica escolhida (G+A, gols ou assistências)
+  function rankingMes() {
+    const mes = state.meses.find(m => m.mes === state.mes);
+    if (!mes) return [];
+    const itens = mes.jogadores.map(i => ({ ...i, ga: i.gols + i.assist, j: state.porId[i.id] || { id: i.id, nome: i.nome, convidado: true } }));
+    return topPor(itens.map(i => ({ ...i.j, _i: i })), p => p._i[state.mesMet]);
+  }
+
+  /* ---------------- Futs (cada partida encerrada) ---------------- */
+  const dataCurta = d => d.slice(8, 10) + '/' + d.slice(5, 7);
+  const futAtual = () => state.futs.find(f => f.id === state.fut);
+
+  // Jogadores do fut com time, gols e assistências (convidado = fora do elenco da temporada)
+  function jogadoresDoFut(f) {
+    return f.resumo.times.flatMap((t, ti) => t.jogadores.map(p => ({
+      id: p.id, nome: p.nome, gols: p.gols, assist: p.assist, ga: p.gols + p.assist, time: t.nome || `Time ${ti + 1}`,
+    })));
+  }
+
+  function rankingFut() {
+    const f = futAtual();
+    if (!f) return [];
+    return topPor(jogadoresDoFut(f).map(p => ({ ...(state.porId[p.id] || { id: p.id, nome: p.nome, convidado: true }), _i: p })), x => x._i[state.futMet]);
+  }
+
+  function renderFuts() {
+    const secao = $('#futs');
+    secao.hidden = !state.futs.length;
+    $$('.nav a[href="#futs"]').forEach(a => { a.hidden = !state.futs.length; });
+    if (!state.futs.length) return;
+    $('#pilulas-fut').innerHTML = state.futs.map((f, i) =>
+      `<button class="aba${f.id === state.fut ? ' ativa' : ''}" data-fut="${f.id}">Fut de ${dataCurta(f.data)}${i === 0 ? ' <small>último</small>' : ''}</button>`).join('');
+
+    const f = futAtual();
+    const r = f.resumo, P = r.premios || {};
+    const times = r.times.map((t, i) => ({ ...t, n: i })).filter(t => t.jogadores.length);
+    const maxGols = Math.max(...times.map(t => t.gols));
+    $('#fut-placar').innerHTML = [...times].sort((a, b) => b.gols - a.gols).map(t =>
+      `<div class="fut-time-placar${t.gols === maxGols ? ' vencedor' : ''}"><span>${esc(t.nome)}</span><b class="num">${t.gols}</b></div>`).join('');
+
+    const quem = k => (P[k] || []);
+    const card = (ic, tit, lista, valor) => `<div class="mes-card${lista.length ? '' : ' vazio'}" ${lista[0] && state.porId[lista[0].id] ? `data-jogador="${lista[0].id}"` : ''}>
+        <span class="lider-icone">${ic}</span><span class="lider-titulo">${tit}</span>
+        <span class="lider-nome">${lista.length ? esc(lista.map(p => p.nome).join(' & ')) : '—'}</span>
+        <span class="lider-valor">${lista.length ? valor(lista[0]) : 'ninguém'}</span>
+      </div>`;
+    $('#fut-destaques').innerHTML = [
+      card('🥇', 'MVP', quem('mvp_s'), p => `<b class="num">${p.gols + p.assist}</b> G+A`),
+      card('🥅', 'Artilheiro', quem('art_s'), p => `<b class="num">${p.gols}</b> gols`),
+      card('🎁', 'Garçom', quem('gar_s'), p => `<b class="num">${p.assist}</b> assistências`),
+      card('✅', 'Time da semana', quem('totw'), () => `${quem('totw').length} jogadores`),
+    ].join('');
+
+    const rs = rankingFut();
+    const max = rs[0]?.valor || 1;
+    $('#fut-ranking').innerHTML = rs.map((x, i) =>
+      itemRanking(x, i, max, int, `${x.j._i.gols}G · ${x.j._i.assist}A · ${esc(x.j._i.time)}${x.j.convidado ? ' · convidado' : ''}`, !x.j.convidado)).join('')
+      || '<li class="rank-vazio">Ninguém pontuou nesse quesito.</li>';
+    $('#fut-titulo').textContent = `${ROTULO_MET[state.futMet]} · fut de ${dataCurta(f.data)}`;
+
+    $('#fut-times').innerHTML = times.map(t => `
+      <div class="fut-time pt-cor-${t.n}">
+        <header><b>${esc(t.nome)}</b><span class="num">${t.gols}</span></header>
+        <ul>${t.jogadores.map(p => `<li ${state.porId[p.id] ? `data-jogador="${p.id}" tabindex="0"` : ''}><span>${esc(p.nome)}</span><small>${[p.gols && `${p.gols}G`, p.assist && `${p.assist}A`].filter(Boolean).join(' · ') || '—'}</small></li>`).join('')}</ul>
+      </div>`).join('');
+  }
+
+  /* ---------------- Exportar ranking (top 10 em imagem) ---------------- */
+  async function exportarRanking(qual, botao) {
+    if (!window.Exportar) return;
+    let titulo, subtitulo, arquivo, lista;
+    const item = (j, pos, valor, sub) => ({ pos, nome: j.nome, iniciais: iniciais(j.nome), foto: state.porId[j.id]?.foto || null, valor, sub });
+    if (qual === 'geral') {
+      const m = MET[state.aba];
+      lista = ranquear(m.id, elegiveis(m, state.minJogos)).slice(0, 10)
+        .map(r => item(r.j, r.pos, m.fmt(r.valor), m.media ? `${r.j.partidas} jogos` : m.id === 'ga' ? `${r.j.gols}G · ${r.j.assist}A` : ''));
+      titulo = `Top 10 · ${m.rotulo}`;
+      subtitulo = m.media ? `Temporada ${state.temporada} · mínimo de ${state.minJogos} jogos` : `Temporada ${state.temporada}`;
+      arquivo = m.id;
+    } else if (qual === 'mes') {
+      lista = rankingMes().slice(0, 10).map(r => item(r.j, r.pos, String(r.valor), `${r.j._i.gols}G · ${r.j._i.assist}A`));
+      titulo = `${ROTULO_MET[state.mesMet]} · ${nomeMes(state.mes)}`;
+      subtitulo = `Top 10 do mês · temporada ${state.temporada}`;
+      arquivo = `${state.mes}-${state.mesMet}`;
+    } else {
+      const f = futAtual();
+      lista = rankingFut().slice(0, 10).map(r => item(r.j, r.pos, String(r.valor), `${r.j._i.gols}G · ${r.j._i.assist}A · ${r.j._i.time}`));
+      titulo = `${ROTULO_MET[state.futMet]} · fut de ${dataCurta(f.data)}`;
+      subtitulo = `Top 10 do fut · temporada ${state.temporada}`;
+      arquivo = `fut-${f.data}-${state.futMet}`;
+    }
+    if (!lista.length) return toast('Nada para exportar ainda.');
+    const [ano, mes, dia] = state.atualizado.split('-');
+    const texto = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = 'Gerando…';
+    try {
+      const r = await Exportar.ranking({ titulo, subtitulo, arquivo, itens: lista, temporada: state.temporada, site: location.host || 'fut-cdm.vercel.app', atualizado: `${dia}/${mes}/${ano}` });
+      if (r === 'baixado') toast('Imagem baixada 📸');
+    } catch (e) {
+      console.error(e);
+      toast('Não foi possível gerar. Tente de novo.');
+    } finally {
+      botao.disabled = false;
+      botao.textContent = texto;
+    }
   }
 
   function renderCorrida() {
@@ -804,6 +921,13 @@
     grupo('#seg-fatia', 'm', v => Charts.fatia(v));
     grupo('#seg-honras', 'g', v => { state.grupoHonras = v; renderHonras(); });
     grupo('#pilulas-mes', 'mes', v => { state.mes = v; renderMeses(); }, 'ativa');
+    grupo('#seg-mes-rank', 'mr', v => { state.mesMet = v; renderMeses(); });
+    grupo('#pilulas-fut', 'fut', v => { state.fut = +v; renderFuts(); }, 'ativa');
+    grupo('#seg-fut-rank', 'fr', v => { state.futMet = v; renderFuts(); });
+    document.addEventListener('click', e => {
+      const b = e.target.closest('[data-exportar-ranking]');
+      if (b) exportarRanking(b.dataset.exportarRanking, b);
+    });
     grupo('#seg-corrida', 'c', v => { state.metricaCorrida = v; renderCorrida(); });
     grupo('#modos-duelo', 'modo', v => definirDuelo(null, null, true, v), 'ativa');
 
@@ -888,6 +1012,7 @@
     renderHonras();
     renderGlossario();
     renderMeses();
+    renderFuts();
     if (state.meses.length) { renderCorrida(); renderHistorico(); renderHeatMeses(); }
     Charts.iniciar(state.jogadores, MIN_JOGOS);
     // Duelo inicial: os 2 melhores regulares; no começo da temporada (ninguém com o mínimo de jogos)

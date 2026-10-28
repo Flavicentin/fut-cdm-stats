@@ -314,5 +314,74 @@ window.Exportar = (() => {
     return entregar(doc.output('blob'), `fut-cdm-${d.id}-${d.temporada}.pdf`, `${d.nome} · Fut CDM ${d.temporada}`);
   }
 
-  return { imagem, pdf, gerarCanvas };
+  /* Ranking (top 10) em imagem: d = { titulo, subtitulo, temporada, site, atualizado, itens: [{ pos, nome, iniciais, foto, valor, sub }] } */
+  async function gerarCanvasRanking(d) {
+    await fontesProntas();
+    const fotos = await Promise.all(d.itens.map(i => (i.foto ? carregarImagem(i.foto).catch(() => null) : null)));
+    const W = 1080, H = 1350, M = 70;
+    const desenhar = comFotos => {
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      fundo(ctx, W, H);
+      ctx.fillStyle = COR.texto; ctx.font = `56px ${TITULO}`; ctx.fillText('FUT', M, 120);
+      ctx.fillStyle = COR.acento; ctx.fillText('CDM', M + ctx.measureText('FUT ').width, 120);
+      ctx.font = `700 24px ${TEXTO}`; ctx.textAlign = 'right'; ctx.fillText(`TEMPORADA ${d.temporada}`, W - M, 116); ctx.textAlign = 'left';
+      ctx.fillStyle = COR.texto; textoAjustado(ctx, d.titulo.toUpperCase(), M, 222, W - 2 * M, 96, TITULO);
+      ctx.fillStyle = COR.texto2; textoAjustado(ctx, d.subtitulo || '', M, 264, W - 2 * M, 26, TEXTO, '500');
+
+      const y0 = 296, hL = 92, gap = 0;
+      d.itens.slice(0, 10).forEach((it, i) => {
+        const y = y0 + i * (hL + gap);
+        if (i % 2 === 0) { retangulo(ctx, M - 10, y + 4, W - 2 * M + 20, hL - 8, 18); ctx.fillStyle = COR.card; ctx.fill(); }
+        const meio = y + hL / 2;
+        // posição
+        ctx.fillStyle = it.pos <= 3 ? corPos(it.pos) : COR.texto3;
+        ctx.font = `60px ${TITULO}`; ctx.textAlign = 'center';
+        ctx.fillText(String(it.pos), M + 30, meio + 21);
+        // foto ou iniciais
+        const R = 34, cx = M + 112;
+        ctx.save();
+        ctx.beginPath(); ctx.arc(cx, meio, R, 0, Math.PI * 2); ctx.closePath();
+        ctx.fillStyle = 'rgba(59, 226, 127, .14)'; ctx.fill(); ctx.clip();
+        const f = comFotos && fotos[i];
+        if (f) {
+          const lado = Math.min(f.width, f.height);
+          ctx.drawImage(f, (f.width - lado) / 2, (f.height - lado) / 2, lado, lado, cx - R, meio - R, R * 2, R * 2);
+        } else {
+          ctx.fillStyle = COR.acento; ctx.font = `32px ${TITULO}`; ctx.textBaseline = 'middle';
+          ctx.fillText(it.iniciais, cx, meio + 2); ctx.textBaseline = 'alphabetic';
+        }
+        ctx.restore();
+        ctx.beginPath(); ctx.arc(cx, meio, R, 0, Math.PI * 2);
+        ctx.strokeStyle = it.pos <= 3 ? corPos(it.pos) : COR.borda; ctx.lineWidth = 3; ctx.stroke();
+        // nome, detalhe e valor
+        ctx.textAlign = 'left';
+        const xNome = cx + R + 24, xValor = W - M - 10;
+        ctx.font = `76px ${TITULO}`;
+        const largValor = ctx.measureText(it.valor).width;
+        ctx.fillStyle = COR.texto;
+        textoAjustado(ctx, it.nome, xNome, it.sub ? meio + 2 : meio + 12, xValor - largValor - xNome - 24, 34, TEXTO, '700');
+        if (it.sub) { ctx.fillStyle = COR.texto2; textoAjustado(ctx, it.sub, xNome, meio + 32, xValor - largValor - xNome - 24, 22, TEXTO, '500'); }
+        ctx.fillStyle = it.pos === 1 ? COR.ouro : COR.texto;
+        ctx.font = `76px ${TITULO}`; ctx.textAlign = 'right';
+        ctx.fillText(it.valor, xValor, meio + 26);
+        ctx.textAlign = 'left';
+      });
+      rodape(ctx, W, H, d);
+      return canvas;
+    };
+    let canvas = desenhar(true);
+    try { canvas.toDataURL('image/png', 0); } catch { canvas = desenhar(false); }
+    return canvas;
+  }
+
+  async function ranking(d) {
+    const canvas = await gerarCanvasRanking(d);
+    const blob = await new Promise(ok => canvas.toBlob(ok, 'image/png'));
+    const nome = `fut-cdm-ranking-${d.arquivo || 'top10'}.png`;
+    return entregar(blob, nome, `${d.titulo} · Fut CDM ${d.temporada}`);
+  }
+
+  return { imagem, pdf, ranking, gerarCanvas, gerarCanvasRanking };
 })();

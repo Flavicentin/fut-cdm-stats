@@ -523,3 +523,28 @@ body.travado { overflow: hidden; }
 /* Perfil: cabeçalho do mês a mês com seletor G+A / Gols / Assist. */
 .mes-perfil-cab { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
 .mes-perfil-cab .seg-pequeno { margin-bottom: 0; }
+
+/* ---------------- Exportar ranking · Futs ---------------- */
+.exportar-ranking { display: flex; justify-content: flex-end; margin-top: 12px; }
+.exportar-ranking .btn:disabled { opacity: .6; cursor: wait; }
+.fut-placar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+@media (min-width: 900px) { .fut-placar { grid-template-columns: repeat(4, 1fr); gap: 12px; } }
+.fut-time-placar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--borda-forte); }
+.fut-time-placar span { font-weight: 600; color: var(--texto-2); }
+.fut-time-placar b { font-family: var(--fonte-titulo); font-size: 34px; line-height: 1; }
+.fut-time-placar.vencedor { border-color: var(--acento); }
+.fut-time-placar.vencedor b { color: var(--acento); }
+.fut-times { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.fut-time { border-radius: 12px; border: 1px solid var(--borda-forte); border-top: 4px solid var(--cor-time, var(--acento)); padding: 10px 12px; min-width: 0; }
+.fut-time header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.fut-time header .num { font-family: var(--fonte-titulo); font-size: 24px; }
+.fut-time ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.fut-time li { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; }
+.fut-time li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fut-time li small { color: var(--texto-2); white-space: nowrap; }
+.fut-time li[data-jogador] { cursor: pointer; }
+.fut-time li[data-jogador]:hover span { color: var(--acento); }
+.pt-cor-0 { --cor-time: #3b82f6; }
+.pt-cor-1 { --cor-time: #ef4444; }
+.pt-cor-2 { --cor-time: #eab308; }
+.pt-cor-3 { --cor-time: #a855f7; }

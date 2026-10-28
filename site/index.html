@@ -30,6 +30,7 @@
         <a href="#rankings">Rankings</a>
         <a href="#trofeus">Troféus</a>
         <a href="#mes-a-mes">Mês a mês</a>
+        <a href="#futs">Futs</a>
         <a href="#analises">Análises</a>
         <a href="#comparar">Comparar</a>
       </nav>
@@ -78,6 +79,7 @@
         </header>
         <div class="abas" id="abas-ranking" role="tablist"></div>
         <p class="aviso" id="nota-adms" hidden>📝 Overall dado pelos adms (planilha “Over”). Não vem dos números dos jogos.</p>
+        <div class="exportar-ranking"><button class="btn" data-exportar-ranking="geral">📸 Exportar top 10 em imagem</button></div>
         <ol class="ranking" id="ranking"></ol>
       </div>
     </section>
@@ -122,9 +124,17 @@
         <div class="mes-destaques" id="mes-destaques"></div>
         <div class="grade-graficos">
           <article class="painel">
-            <h3 id="mes-titulo">G+A do mês</h3>
-            <p class="painel-desc">Top 12 do mês em gols + assistências.</p>
+            <div class="mes-perfil-cab">
+              <h3 id="mes-titulo">G+A do mês</h3>
+              <div class="seg seg-pequeno" id="seg-mes-rank" role="group" aria-label="Ranking do mês">
+                <button data-mr="ga" class="ativo">G+A</button>
+                <button data-mr="gols">Gols</button>
+                <button data-mr="assist">Assist.</button>
+              </div>
+            </div>
+            <p class="painel-desc" id="mes-desc">Todo mundo que marcou ou deu assistência no mês.</p>
             <ol class="ranking ranking-compacto" id="mes-ranking"></ol>
+            <div class="exportar-ranking"><button class="btn" data-exportar-ranking="mes">📸 Exportar top 10</button></div>
           </article>
           <article class="painel">
             <h3>Corrida da temporada</h3>
@@ -172,6 +182,41 @@
             <h3>Mapa de calor da temporada</h3>
             <p class="painel-desc">G+A de cada jogador em cada mês. Dá pra ver quem é constante e quem teve um mês fora da curva.</p>
             <div class="grafico" id="g-heat-meses"></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- FUTS (cada partida encerrada) -->
+    <section class="secao" id="futs" hidden>
+      <div class="wrap">
+        <header class="secao-cab">
+          <div>
+            <p class="kicker">Semana a semana</p>
+            <h2>Futs</h2>
+          </div>
+        </header>
+        <div class="abas" id="pilulas-fut" role="tablist"></div>
+        <div class="fut-placar" id="fut-placar"></div>
+        <div class="mes-destaques" id="fut-destaques"></div>
+        <div class="grade-graficos">
+          <article class="painel">
+            <div class="mes-perfil-cab">
+              <h3 id="fut-titulo">Ranking do fut</h3>
+              <div class="seg seg-pequeno" id="seg-fut-rank" role="group" aria-label="Ranking do fut">
+                <button data-fr="ga" class="ativo">G+A</button>
+                <button data-fr="gols">Gols</button>
+                <button data-fr="assist">Assist.</button>
+              </div>
+            </div>
+            <p class="painel-desc">Quem marcou e deu assistência neste fut.</p>
+            <ol class="ranking ranking-compacto" id="fut-ranking"></ol>
+            <div class="exportar-ranking"><button class="btn" data-exportar-ranking="fut">📸 Exportar top 10</button></div>
+          </article>
+          <article class="painel">
+            <h3>Times</h3>
+            <p class="painel-desc">Gols de cada time e o que cada um fez.</p>
+            <div class="fut-times" id="fut-times"></div>
           </article>
         </div>
       </div>
