@@ -1182,7 +1182,7 @@
   // "Leozito: PAC 85 · FIN 86 · ..." (só o que tem valor)
   const linhaTexto = (l, cols) => `${l.nome}: ${cols.map(c => [c.r, valorCelula(l, c)]).filter(([, v]) => v != null).map(([r, v]) => `${r} ${v}`).join(' · ') || 'sem números'}`;
 
-  const tituloGrade = () => st.aba === 'mes' ? `${NOME_MES[+st.mes.slice(5, 7)]} ${st.mes.slice(0, 4)}` : `${ABAS[st.aba].csv} · temporada ${st.temporada}`;
+  const tituloGrade = () => st.aba === 'mes' ? `${NOME_MES[+st.mes.slice(5, 7)]} ${st.mes.slice(0, 4)}` : `${{ temporada: 'Totais', honrarias: 'Honrarias', over: 'Notas Over' }[st.aba] || ABAS[st.aba].csv} · temporada ${st.temporada}`;
 
   async function copiarTexto(texto, msg) {
     try {

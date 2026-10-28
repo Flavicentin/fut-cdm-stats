@@ -259,7 +259,7 @@
     return `<li class="rank-item" data-pos="${r.pos}" ${clicavel ? `data-jogador="${r.j.id}" tabindex="0"` : ''} style="--i:${i}">
       <span class="rank-pos">${r.pos}</span>
       <div class="rank-corpo">
-        <div class="rank-nome">${esc(r.j.nome)}${sub ? ` <small>${sub}</small>` : ''}</div>
+        <div class="rank-nome"><span>${esc(r.j.nome)}</span>${sub ? ` <small>${sub}</small>` : ''}</div>
         <div class="rank-barra"><span style="--w:${(r.valor / max * 100).toFixed(1)}%;--i:${i}"></span></div>
       </div>
       <span class="rank-valor num">${fmt(r.valor)}</span>
@@ -1013,6 +1013,8 @@
     renderGlossario();
     renderMeses();
     renderFuts();
+    // no celular "Buscar jogador…" não cabe ao lado do logo
+    if (matchMedia('(max-width: 599px)').matches) $('#busca-global input').placeholder = 'Buscar…';
     if (state.meses.length) { renderCorrida(); renderHistorico(); renderHeatMeses(); }
     Charts.iniciar(state.jogadores, MIN_JOGOS);
     // Duelo inicial: os 2 melhores regulares; no começo da temporada (ninguém com o mínimo de jogos)
