@@ -266,6 +266,10 @@
     </li>`;
   }
 
+  // Detalhe cinza ao lado do nome nos rankings gerais: sempre com o número de jogos
+  const jogos = j => `${j.partidas} jogo${j.partidas === 1 ? '' : 's'}`;
+  const subGeral = (m, j) => m.id === 'partidas' ? '' : m.id === 'ga' ? `${j.gols}G · ${j.assist}A · ${jogos(j)}` : jogos(j);
+
   function renderRanking() {
     const m = MET[state.aba];
     $('#filtro-min').hidden = !m.media;
@@ -274,8 +278,7 @@
     if (!rs.length) { $('#ranking').innerHTML = '<li class="rank-vazio">Ninguém com esse mínimo de jogos.</li>'; return; }
     const max = rs[0].valor;
     $('#ranking').innerHTML = rs.map((r, i) => {
-      const sub = m.media ? `${r.j.partidas} jogos${r.j.partidas < MIN_JOGOS ? ' · poucos jogos' : ''}`
-        : m.id === 'ga' ? `${r.j.gols}G · ${r.j.assist}A` : '';
+      const sub = subGeral(m, r.j) + (m.media && r.j.partidas < MIN_JOGOS ? ' · poucos jogos' : '');
       return itemRanking(r, i, max, m.fmt, sub);
     }).join('');
   }
@@ -420,7 +423,7 @@
     if (qual === 'geral') {
       const m = MET[state.aba];
       lista = ranquear(m.id, elegiveis(m, state.minJogos)).slice(0, 10)
-        .map(r => item(r.j, r.pos, m.fmt(r.valor), m.media ? `${r.j.partidas} jogos` : m.id === 'ga' ? `${r.j.gols}G · ${r.j.assist}A` : ''));
+        .map(r => item(r.j, r.pos, m.fmt(r.valor), subGeral(m, r.j)));
       titulo = `Top 10 · ${m.rotulo}`;
       subtitulo = m.media ? `Temporada ${state.temporada} · mínimo de ${state.minJogos} jogos` : `Temporada ${state.temporada}`;
       arquivo = m.id;
