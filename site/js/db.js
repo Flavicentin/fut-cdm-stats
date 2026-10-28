@@ -49,5 +49,15 @@ window.Db = (() => {
     }
   }
 
-  return { carregarTemporada, carregarFuts };
+  // Nome e foto de todo mundo, inclusive convidados (que não vêm no JSON da temporada)
+  async function carregarJogadores() {
+    try {
+      const r = await fetch(`${supabaseUrl}/rest/v1/jogadores?select=id,nome,foto`, { headers: { apikey: supabaseKey } });
+      return r.ok ? Object.fromEntries((await r.json()).map(j => [j.id, j])) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  return { carregarTemporada, carregarFuts, carregarJogadores };
 })();

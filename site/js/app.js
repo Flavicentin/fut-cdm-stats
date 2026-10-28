@@ -126,7 +126,7 @@
     state.regulares = state.comJogos.filter(j => j.partidas >= MIN_JOGOS);
     state.meses = dados.meses || [];
     state.mes = state.meses.at(-1)?.mes;
-    state.futs = await Db.carregarFuts(state.temporada);
+    [state.futs, state.cadastro] = await Promise.all([Db.carregarFuts(state.temporada), Db.carregarJogadores()]);
     state.fut = state.futs[0]?.id ?? null;
     // série mês a mês de cada jogador do elenco
     for (const j of state.jogadores) j.porMes = state.meses.map(m => m.jogadores.find(i => i.id === j.id) || { gols: 0, assist: 0 });
@@ -323,7 +323,7 @@
     const itens = mes.jogadores.map(i => ({ ...i, ga: i.gols + i.assist, j: state.porId[i.id] || { id: i.id, nome: i.nome, convidado: true } }));
     const pessoa = i => ({ ...i.j, _i: i });
     const top = (val) => topPor(itens.map(pessoa), p => val(p._i)).filter(r => r.pos === 1);
-    const card = (ic, tit, rs, un) => `<div class="mes-card${rs.length ? '' : ' vazio'}" ${rs[0] && !rs[0].j.convidado ? `data-jogador="${rs[0].j.id}"` : ''}>
+    const card = (ic, tit, rs, un) => `<div class="mes-card${rs.length ? '' : ' vazio'}" ${rs[0] ? `data-jogador="${rs[0].j.id}"` : ''}>
         <span class="lider-icone">${ic}</span><span class="lider-titulo">${tit}</span>
         <span class="lider-nome">${rs.length ? esc(nomes(rs)) : '—'}</span>
         <span class="lider-valor">${rs.length ? `<b class="num">${rs[0].valor}</b> ${un}` : 'ainda não definido'}</span>
@@ -338,7 +338,7 @@
     const rs = rankingMes();
     const max = rs[0]?.valor || 1;
     $('#mes-ranking').innerHTML = rs.map((r, i) =>
-      itemRanking(r, i, max, int, `${r.j._i.gols}G · ${r.j._i.assist}A${r.j.convidado ? ' · convidado' : ''}`, !r.j.convidado)).join('')
+      itemRanking(r, i, max, int, `${r.j._i.gols}G · ${r.j._i.assist}A${r.j.convidado ? ' · convidado' : ''}`)).join('')
       || '<li class="rank-vazio">Ninguém pontuou nesse quesito ainda.</li>';
     $('#mes-titulo').textContent = `${ROTULO_MET[state.mesMet]} em ${nomeMes(state.mes)}`;
   }
@@ -386,7 +386,7 @@
       `<div class="fut-time-placar${t.gols === maxGols ? ' vencedor' : ''}"><span>${esc(t.nome)}</span><b class="num">${t.gols}</b></div>`).join('');
 
     const quem = k => (P[k] || []);
-    const card = (ic, tit, lista, valor) => `<div class="mes-card${lista.length ? '' : ' vazio'}" ${lista[0] && state.porId[lista[0].id] ? `data-jogador="${lista[0].id}"` : ''}>
+    const card = (ic, tit, lista, valor) => `<div class="mes-card${lista.length ? '' : ' vazio'}" ${lista[0] ? `data-jogador="${lista[0].id}"` : ''}>
         <span class="lider-icone">${ic}</span><span class="lider-titulo">${tit}</span>
         <span class="lider-nome">${lista.length ? esc(lista.map(p => p.nome).join(' & ')) : '—'}</span>
         <span class="lider-valor">${lista.length ? valor(lista[0]) : 'ninguém'}</span>
@@ -401,14 +401,14 @@
     const rs = rankingFut();
     const max = rs[0]?.valor || 1;
     $('#fut-ranking').innerHTML = rs.map((x, i) =>
-      itemRanking(x, i, max, int, `${x.j._i.gols}G · ${x.j._i.assist}A · ${esc(x.j._i.time)}${x.j.convidado ? ' · convidado' : ''}`, !x.j.convidado)).join('')
+      itemRanking(x, i, max, int, `${x.j._i.gols}G · ${x.j._i.assist}A · ${esc(x.j._i.time)}${x.j.convidado ? ' · convidado' : ''}`)).join('')
       || '<li class="rank-vazio">Ninguém pontuou nesse quesito.</li>';
     $('#fut-titulo').textContent = `${ROTULO_MET[state.futMet]} · fut de ${dataCurta(f.data)}`;
 
     $('#fut-times').innerHTML = times.map(t => `
       <div class="fut-time pt-cor-${t.n}">
         <header><b>${esc(t.nome)}</b><span class="num">${t.gols}</span></header>
-        <ul>${t.jogadores.map(p => `<li ${state.porId[p.id] ? `data-jogador="${p.id}" tabindex="0"` : ''}><span>${esc(p.nome)}</span><small>${[p.gols && `${p.gols}G`, p.assist && `${p.assist}A`].filter(Boolean).join(' · ') || '—'}</small></li>`).join('')}</ul>
+        <ul>${t.jogadores.map(p => `<li data-jogador="${esc(p.id)}" tabindex="0"><span>${esc(p.nome)}</span><small>${[p.gols && `${p.gols}G`, p.assist && `${p.assist}A`].filter(Boolean).join(' · ') || '—'}</small></li>`).join('')}</ul>
       </div>`).join('');
   }
 
@@ -416,7 +416,7 @@
   async function exportarRanking(qual, botao) {
     if (!window.Exportar) return;
     let titulo, subtitulo, arquivo, lista;
-    const item = (j, pos, valor, sub) => ({ pos, nome: j.nome, iniciais: iniciais(j.nome), foto: state.porId[j.id]?.foto || null, valor, sub });
+    const item = (j, pos, valor, sub) => ({ pos, nome: j.nome, iniciais: iniciais(j.nome), foto: fotoDe(j.id), valor, sub });
     if (qual === 'geral') {
       const m = MET[state.aba];
       lista = ranquear(m.id, elegiveis(m, state.minJogos)).slice(0, 10)
@@ -577,9 +577,60 @@
     }
   }
 
+  const fotoDe = id => state.porId[id]?.foto || state.cadastro?.[id]?.foto || null;
+
+  // Convidado não está no elenco da temporada: perfil simples com os futs e os meses em que apareceu
+  function abrirPerfilConvidado(id) {
+    const futs = state.futs.map(f => ({ f, p: jogadoresDoFut(f).find(p => p.id === id) })).filter(x => x.p);
+    const meses = state.meses.map(m => ({ m, i: m.jogadores.find(i => i.id === id) })).filter(x => x.i);
+    const nome = state.cadastro?.[id]?.nome || futs[0]?.p.nome || meses[0]?.i.nome;
+    if (!nome) return false;
+    const foto = fotoDe(id);
+    const gols = meses.reduce((t, x) => t + x.i.gols, 0), assist = meses.reduce((t, x) => t + x.i.assist, 0);
+    const premios = futs.flatMap(({ f }) => Object.entries(f.resumo.premios || {}).filter(([, l]) => l.some(p => p.id === id)).map(([k]) => k));
+    const contagem = premios.reduce((c, k) => ({ ...c, [k]: (c[k] || 0) + 1 }), {});
+    const num = (v, r) => `<div class="perfil-num"><b class="num">${v}</b><span>${r}</span></div>`;
+    $('#perfil').innerHTML = `
+      <div class="perfil-cab">
+        <div class="perfil-foto" aria-hidden="true">
+          <span>${esc(iniciais(nome))}</span>
+          ${foto ? `<img src="${esc(foto)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
+        </div>
+        <div class="perfil-info">
+          <p class="kicker">Temporada ${state.temporada}</p>
+          <h2 id="perfil-nome">${esc(nome)}</h2>
+          <span class="perfil-tag">Convidado · não faz parte do elenco, então fica fora dos rankings da temporada</span>
+          <div class="perfil-nums">${num(gols, 'Gols')}${num(assist, 'Assist.')}${num(gols + assist, 'G+A')}${num(futs.length, futs.length === 1 ? 'Fut no app' : 'Futs no app')}</div>
+        </div>
+      </div>
+      <div class="perfil-grade">
+        ${Object.keys(contagem).length ? `
+        <article class="painel painel-largo">
+          <h3>Honrarias nos futs</h3>
+          <div class="estante">${Object.entries(contagem).map(([k, n]) => `<div class="trofeu"><span class="t-ic">${HON[k]?.ic || '🏅'}</span><b class="num">${n}×</b><span>${HON[k]?.nome || k}</span></div>`).join('')}</div>
+        </article>` : ''}
+        ${futs.length ? `
+        <article class="painel painel-largo">
+          <h3>Futs</h3>
+          <ul class="posicoes">${futs.map(({ f, p }) => `<li><span>Fut de ${dataCurta(f.data)} · ${esc(p.time)}</span><span class="val">${p.gols}G · ${p.assist}A</span><span class="pos"></span></li>`).join('')}</ul>
+        </article>` : ''}
+        ${meses.length ? `
+        <article class="painel painel-largo">
+          <h3>Mês a mês</h3>
+          <ul class="posicoes">${meses.map(({ m, i }) => `<li><span>${nomeMes(m.mes)}</span><span class="val">${i.gols}G · ${i.assist}A</span><span class="pos"></span></li>`).join('')}</ul>
+        </article>` : ''}
+      </div>`;
+    $('#modal').hidden = false;
+    document.body.classList.add('travado');
+    $('.modal-caixa').scrollTop = 0;
+    state.perfilId = null;
+    $('.modal-fechar').focus();
+    return true;
+  }
+
   function abrirPerfil(id) {
     const j = state.porId[id];
-    if (!j) return;
+    if (!j) return abrirPerfilConvidado(id);
     const temJogos = j.partidas > 0;
     const posicoes = METRICAS.map(m => {
       const p = j.ranks[m.id];
