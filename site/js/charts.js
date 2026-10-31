@@ -6,11 +6,18 @@ const Charts = (() => {
   let jogadores = [];            // com jogos registrados
   let regulares = [];            // com o mínimo de jogos para médias
   let metricaFatia = 'gols';
+  let limiteComposicao = Infinity;   // linhas visíveis na Composição (o resto abre em "Ver todos")
 
   const tok = n => getComputedStyle(document.documentElement).getPropertyValue('--' + n).trim();
   const dec = v => v.toFixed(1).replace('.', ',');
   const estreito = () => window.innerWidth < 600;
   const abrir = p => { if (p.data && p.data.id) location.hash = `jogador/${p.data.id}`; };
+  // No celular os nomes se sobrepõem: rótulo só para os 8 com mais G+A (o resto aparece ao tocar)
+  function rotuloVisivel(lista) {
+    if (!estreito()) return () => true;
+    const top = new Set([...lista].sort((a, b) => b.ga - a.ga).slice(0, 8).map(j => j.id));
+    return p => top.has(p.data.id);
+  }
 
   function base() {
     return {
@@ -53,10 +60,12 @@ const Charts = (() => {
 
   /* Finalizador × Garçom */
   function opPerfil() {
+    if (!regulares.length) return { ...base(), series: [] };
     const mx = regulares.reduce((s, j) => s + j.gpj, 0) / regulares.length;
+    const mostra = rotuloVisivel(regulares);
     const my = regulares.reduce((s, j) => s + j.apj, 0) / regulares.length;
-    const quad = (txt, pos) => ({ type: 'text', ...pos, style: { text: txt, fill: tok('texto-3'), font: '700 11px Inter, sans-serif' }, silent: true });
-    const g = { left: 48, right: 24, top: 24, bottom: 48 };
+    const quad = (txt, pos) => ({ type: 'text', ...pos, style: { text: txt, fill: tok('texto-3'), font: `700 ${estreito() ? 9 : 11}px Inter, sans-serif` }, silent: true });
+    const g = estreito() ? { left: 40, right: 48, top: 20, bottom: 44 } : { left: 48, right: 24, top: 24, bottom: 48 };
     return {
       ...base(),
       grid: g,
@@ -77,7 +86,7 @@ const Charts = (() => {
         symbolSize: estreito() ? 11 : 14,
         itemStyle: { color: tok('acento'), borderColor: tok('surface'), borderWidth: 2 },
         emphasis: { scale: 1.5, itemStyle: { color: tok('ouro') } },
-        label: { show: true, position: 'right', formatter: p => p.data.name, color: tok('texto'), fontSize: estreito() ? 10 : 12, fontWeight: 600 },
+        label: { show: true, position: 'right', formatter: p => mostra(p) ? p.data.name : '', color: tok('texto'), fontSize: estreito() ? 10 : 12, fontWeight: 600 },
         labelLayout: { hideOverlap: true },
         data: regulares.map(j => ({ id: j.id, name: j.nome, partidas: j.partidas, value: [j.gpj, j.apj] })),
         markLine: {
@@ -92,11 +101,13 @@ const Charts = (() => {
 
   /* Presença × Rendimento */
   function opPresenca() {
-    const maxGa = Math.max(...regulares.map(j => j.ga));
+    if (!regulares.length) return { ...base(), series: [] };
+    const maxGa = Math.max(1, ...regulares.map(j => j.ga));
+    const mostra = rotuloVisivel(regulares);
     return {
       ...base(),
       grid: { left: 44, right: 20, top: 20, bottom: 48 },
-      xAxis: eixo('Partidas jogadas', { min: v => Math.floor(v.min - 2), max: v => Math.ceil(v.max + 2) }),
+      xAxis: eixo('Partidas jogadas', { min: v => Math.max(0, Math.floor(v.min - 2)), max: v => Math.ceil(v.max + 2) }),
       yAxis: eixo('G+A por jogo', { min: 0, max: v => Math.ceil(v.max + .5) }),
       tooltip: {
         ...base().tooltip,
@@ -104,10 +115,10 @@ const Charts = (() => {
       },
       series: [{
         type: 'scatter',
-        symbolSize: (v, p) => 10 + 34 * Math.sqrt(p.data.ga / maxGa),
+        symbolSize: (v, p) => (estreito() ? 8 : 10) + (estreito() ? 24 : 34) * Math.sqrt(p.data.ga / maxGa),
         itemStyle: { color: tok('acento'), opacity: .75, borderColor: tok('surface'), borderWidth: 2 },
         emphasis: { itemStyle: { opacity: 1, color: tok('ouro') } },
-        label: { show: true, formatter: p => p.data.name, color: tok('texto'), fontSize: estreito() ? 10 : 11, fontWeight: 600, position: 'top' },
+        label: { show: true, formatter: p => mostra(p) ? p.data.name : '', color: tok('texto'), fontSize: estreito() ? 10 : 11, fontWeight: 600, position: 'top' },
         labelLayout: { hideOverlap: true },
         data: regulares.map(j => ({ id: j.id, name: j.nome, ga: j.ga, value: [j.partidas, j.gapj] })),
       }],
@@ -155,7 +166,7 @@ const Charts = (() => {
 
   /* Composição do G+A */
   function opComposicao() {
-    const ord = [...jogadores].sort((a, b) => b.ga - a.ga || b.gols - a.gols);
+    const ord = [...jogadores].sort((a, b) => b.ga - a.ga || b.gols - a.gols).slice(0, limiteComposicao);
     const seg = (nome, k, cor, ultimo) => ({
       name: nome, type: 'bar', stack: 'ga', barWidth: estreito() ? 14 : 18,
       itemStyle: { color: cor, borderColor: tok('surface'), borderWidth: 1, borderRadius: ultimo ? [0, 4, 4, 0] : 0 },
@@ -173,7 +184,7 @@ const Charts = (() => {
         ...base().tooltip, trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: tok('acento-suave') } },
         formatter: ps => {
           const j = ord[ps[0].dataIndex];
-          return `<b>${esc(j.nome)}</b><br>${ps.map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>')}<br>G+A: <b>${j.ga}</b> · ${Math.round(j.gols / j.ga * 100)}% em gols`;
+          return `<b>${esc(j.nome)}</b><br>${ps.map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>')}<br>G+A: <b>${j.ga}</b> · ${j.ga ? Math.round(j.gols / j.ga * 100) : 0}% em gols`;
         },
       },
       xAxis: { type: 'value', axisLabel: { color: tok('texto-3'), fontSize: 11 }, splitLine: { lineStyle: { color: tok('borda'), type: [3, 4] } } },
@@ -394,15 +405,8 @@ const Charts = (() => {
     };
   }
 
-  function iniciar(js, minJogos) {
-    jogadores = js.filter(j => j.partidas > 0);
-    regulares = jogadores.filter(j => j.partidas >= minJogos);
-    const comp = document.getElementById('g-composicao');
-    comp.style.height = `${jogadores.length * 26 + 60}px`;
-    montar(document.getElementById('g-perfil'), opPerfil);
-    montar(document.getElementById('g-presenca'), opPresenca);
-    montar(document.getElementById('g-fatia'), opFatia);
-    montar(document.getElementById('g-composicao'), opComposicao);
+  // Liga o redimensionamento uma vez só
+  function iniciar() {
     let t;
     window.addEventListener('resize', () => {
       clearTimeout(t);
@@ -410,8 +414,24 @@ const Charts = (() => {
     });
   }
 
+  // Redesenha as análises com os jogadores do período (comJogos) e quem tem o mínimo de jogos (regulares)
+  function atualizar(comJogos, regs, limite = Infinity) {
+    jogadores = comJogos;
+    regulares = regs;
+    limiteComposicao = limite;
+    const comp = document.getElementById('g-composicao');
+    comp.style.height = `${Math.max(1, Math.min(jogadores.length, limite)) * 26 + 60}px`;
+    for (const id of ['g-perfil', 'g-presenca']) {
+      const el = document.getElementById(id);
+      if (!el.hidden) montar(el, id === 'g-perfil' ? opPerfil : opPresenca);
+    }
+    montar(document.getElementById('g-fatia'), opFatia);
+    montar(document.getElementById('g-composicao'), opComposicao);
+  }
+
   return {
     iniciar,
+    atualizar,
     fatia(m) { metricaFatia = m; montar(document.getElementById('g-fatia'), opFatia); },
     radar(el, series, atributos, legenda = true, escala) { montar(el, () => opRadar(series, atributos, legenda, escala)); },
     heatmap(el, cfg) { el.style.height = `${cfg.linhas.length * 30 + 50}px`; montar(el, () => opHeatmap(cfg)); },

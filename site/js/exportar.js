@@ -90,7 +90,7 @@ window.Exportar = (() => {
     ctx.fillText('CDM', M + ctx.measureText('FUT ').width, 120);
     ctx.font = `700 24px ${TEXTO}`;
     ctx.textAlign = 'right';
-    ctx.fillText(`TEMPORADA ${d.temporada}`, W - M, 116);
+    ctx.fillText(d.recorte ? d.recorte.toUpperCase() : `TEMPORADA ${d.temporada}`, W - M, 116);
     ctx.textAlign = 'left';
 
     // foto (ou iniciais) num círculo
@@ -326,7 +326,7 @@ window.Exportar = (() => {
       fundo(ctx, W, H);
       ctx.fillStyle = COR.texto; ctx.font = `56px ${TITULO}`; ctx.fillText('FUT', M, 120);
       ctx.fillStyle = COR.acento; ctx.fillText('CDM', M + ctx.measureText('FUT ').width, 120);
-      ctx.font = `700 24px ${TEXTO}`; ctx.textAlign = 'right'; ctx.fillText(`TEMPORADA ${d.temporada}`, W - M, 116); ctx.textAlign = 'left';
+      ctx.font = `700 24px ${TEXTO}`; ctx.textAlign = 'right'; ctx.fillText(d.recorte ? d.recorte.toUpperCase() : `TEMPORADA ${d.temporada}`, W - M, 116); ctx.textAlign = 'left';
       ctx.fillStyle = COR.texto; textoAjustado(ctx, d.titulo.toUpperCase(), M, 222, W - 2 * M, 96, TITULO);
       ctx.fillStyle = COR.texto2; textoAjustado(ctx, d.subtitulo || '', M, 264, W - 2 * M, 26, TEXTO, '500');
 

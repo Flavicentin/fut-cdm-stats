@@ -86,7 +86,7 @@
 
 /* ============ Base ============ */
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 80px; -webkit-text-size-adjust: 100%; }
+html { scroll-behavior: smooth; scroll-padding-top: 128px; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   background: var(--bg);
@@ -484,9 +484,6 @@ body.travado { overflow: hidden; }
   .duelista-nome { font-size: 28px; }
 }
 
-/* Pódios com a lista completa: rolagem própria quando passa de ~7 nomes */
-.podio ol { max-height: 330px; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; scrollbar-width: thin; }
-
 /* Corrida: busca para destacar um jogador */
 .corrida-ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
 .corrida-ctrl .seg-pequeno { margin-bottom: 0; }
@@ -563,3 +560,69 @@ body.travado { overflow: hidden; }
   .rank-nome { flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.25; min-width: 0; }
   .rank-nome span, .rank-nome small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+/* ============ Período (fixo no topo, junto com o cabeçalho) ============ */
+.barra-periodo { max-width: 1180px; margin: 0 auto; padding: 0 16px 10px; }
+.barra-periodo[hidden] { display: none; }
+@media (min-width: 720px) { .barra-periodo { padding: 0 28px 12px; } }
+.seg-periodo { display: flex; width: 100%; }
+.seg-periodo button { flex: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; line-height: 1.15; padding: 5px 6px; }
+.seg-periodo button b { font-size: 14px; font-weight: 700; }
+.seg-periodo button small { font-size: 11px; font-weight: 500; opacity: .75; }
+@media (min-width: 720px) { .seg-periodo { width: auto; display: inline-flex; } .seg-periodo button { flex: none; min-width: 150px; } }
+
+/* Gráficos de médias: altura menor no celular */
+#g-perfil { height: 440px; }
+#g-presenca { height: 420px; }
+#g-perfil[hidden], #g-presenca[hidden] { display: none; }
+@media (max-width: 599px) { #g-perfil, #g-presenca { height: 340px; } }
+
+/* ============ Momento ============ */
+.momento-tit { font-family: var(--fonte-titulo); font-size: 30px; letter-spacing: .02em; margin: 0 0 12px; }
+/* cards do mês: rolagem lateral no celular, grade no desktop */
+.momento-cards {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(160px, 46%); gap: 10px;
+  overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; scrollbar-width: none; margin: 0 -16px 16px; padding: 2px 16px 4px;
+}
+.momento-cards::-webkit-scrollbar { display: none; }
+.momento-cards .mes-card { scroll-snap-align: start; }
+@media (min-width: 900px) {
+  .momento-cards { grid-auto-flow: row; grid-template-columns: repeat(5, 1fr); margin: 0 0 16px; padding: 0; overflow: visible; }
+}
+
+.alta { display: grid; gap: 14px; grid-template-columns: 1fr; padding-bottom: 8px; }
+@media (min-width: 560px) { .alta { grid-template-columns: 1fr 1fr; } }
+.alta-col h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--texto-3); }
+.alta-col ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.alta-col li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); cursor: pointer; }
+.alta-col li:hover { outline: 1px solid var(--borda-forte); }
+.alta-col li.vazio { color: var(--texto-3); cursor: default; font-size: 13px; }
+.alta-nome { display: flex; flex-direction: column; min-width: 0; font-weight: 700; }
+.alta-nome small { font-weight: 500; font-size: 12px; color: var(--texto-3); }
+.seta { font-style: normal; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.seta.sobe { color: var(--acento-forte); }
+.seta.desce { color: var(--s-b); }
+
+/* ============ Perfil: forma ============ */
+.forma-box { overflow-x: auto; padding-bottom: 8px; }
+.forma { width: 100%; border-collapse: collapse; font-size: 14px; }
+.forma th, .forma td { padding: 7px 6px; text-align: right; border-bottom: 1px solid var(--borda); white-space: nowrap; }
+.forma tbody th { text-align: left; font-weight: 600; color: var(--texto-2); }
+.forma thead th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--texto-3); }
+.forma thead th.atual { color: var(--acento); }
+.forma tr:last-child th, .forma tr:last-child td { border-bottom: 0; }
+.forma td.sem { color: var(--texto-3); }
+@media (max-width: 599px) { .forma { font-size: 13px; } .forma th, .forma td { padding: 7px 4px; } }
+
+/* Celular: período compacto, numa linha só, abaixo do menu de seções */
+@media (max-width: 899px) {
+  html { scroll-padding-top: 156px; }
+  .barra-periodo { padding-bottom: 8px; }
+  .seg-periodo button { min-height: 38px; padding: 4px 6px; }
+  .seg-periodo button small { display: none; }
+}
+
+/* Listas longas: botão "Ver todos" */
+.ver-mais { display: flex; justify-content: center; width: 100%; min-height: 44px; margin: 10px 0 8px; color: var(--texto-2); }
+.ver-mais[hidden] { display: none; }
+.podios + .ver-mais { margin: -4px 0 16px; }

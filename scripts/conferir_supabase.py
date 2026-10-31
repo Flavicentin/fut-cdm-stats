@@ -19,7 +19,8 @@ def config():
 
 
 def normalizar(dados):
-    """Ordena listas e remove 'nome' dos itens mensais de quem é do elenco (o JSON só traz para convidados)."""
+    """Ordena listas e remove 'nome' dos itens mensais de quem é do elenco (o JSON só traz para convidados).
+    Ignora os jogos do mês ('partidas'), que o JSON local não tem, e quem só tem jogos no mês (sem G/A)."""
     elenco = {j["id"] for j in dados["jogadores"]}
     jogadores = sorted(({k: v for k, v in j.items()} for j in dados["jogadores"]), key=lambda j: j["id"])
     meses = []
@@ -29,7 +30,9 @@ def normalizar(dados):
             i = dict(i)
             if i["id"] in elenco:
                 i.pop("nome", None)
-            itens.append(i)
+            i.pop("partidas", None)
+            if i.get("gols") or i.get("assist") or i.get("honras"):
+                itens.append(i)
         meses.append({"mes": m["mes"], "jogadores": sorted(itens, key=lambda i: i["id"])})
     return {"temporada": dados["temporada"], "atualizado_em": dados["atualizado_em"], "jogadores": jogadores, "meses": meses}
 

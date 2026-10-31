@@ -15,7 +15,11 @@
     return (p.length > 1 ? p[0][0] + p.at(-1)[0] : nome.slice(0, 2)).toUpperCase();
   };
 
-  const MIN_JOGOS = 10;   // mesmo critério dos adms para as médias
+  // Recortes do site: temporada inteira (totais oficiais) e o mês atual (soma do mês, com os jogos registrados no app).
+  const PERIODOS = ['temporada', 'mes'];
+  // Mínimo de jogos para entrar nas médias do mês: o 1º é o padrão (a temporada usa o min_jogos do banco)
+  const MINIMOS = { mes: [2, 3, 4, 1] };
+  const LIMITE_LINHAS = 7;   // listas longas mostram só as primeiras linhas; "Ver todos" abre o resto
 
   const METRICAS = [
     { id: 'gols', rotulo: 'Gols', fmt: int, val: j => j.gols },
@@ -24,7 +28,7 @@
     { id: 'gpj', rotulo: 'Gols/jogo', fmt: dec, val: j => j.gpj, media: true },
     { id: 'apj', rotulo: 'Assist/jogo', fmt: dec, val: j => j.apj, media: true },
     { id: 'gapj', rotulo: 'G+A/jogo', fmt: dec, val: j => j.gapj, media: true },
-    { id: 'partidas', rotulo: 'Partidas', fmt: int, val: j => j.partidas },
+    { id: 'partidas', rotulo: 'Partidas', fmt: int, val: j => j.partidas, jogos: true },
   ];
   const ABA_OVERALL = { id: 'ovr', rotulo: 'Overall · adms', fmt: int, val: j => j.over?.ovr ?? 0, adms: true };
   const MET = Object.fromEntries([...METRICAS, ABA_OVERALL].map(m => [m.id, m]));
@@ -77,6 +81,7 @@
   const nomeMes = m => NOME_MES[+m.slice(5, 7)];
   const curtoMes = m => nomeMes(m).slice(0, 3);
   const mesAtual = new Date().toISOString().slice(0, 7);
+  const listaNomes = xs => xs.length > 1 ? `${xs.slice(0, -1).join(', ')} e ${xs.at(-1)}` : xs[0] || '';
 
   const POSICOES = {
     ATA: 'Atacante · finalizador nato',
@@ -92,7 +97,15 @@
     porId: {},
     meses: [],
     aba: 'gols',
-    minJogos: MIN_JOGOS,
+    abertos: new Set(),   // listas abertas com "Ver todos"
+    base: null,        // temporada inteira (totais oficiais + porMes), não muda com o período
+    periodo: 'temporada',
+    mesesVis: [],      // meses do período escolhido
+    semJogos: [],      // meses do período sem jogos lançados (sem médias por jogo)
+    semMedias: false,
+    minBase: 10,
+    minPeriodo: 10,
+    minJogos: 10,
     grupoHonras: 's',
     mes: null,
     metricaCorrida: 'gols',
@@ -117,27 +130,92 @@
     const dados = await Db.carregarTemporada(new URLSearchParams(location.search).get('temporada') || undefined);
     state.temporada = dados.temporada;
     state.atualizado = dados.atualizado_em;
-    state.jogadores = dados.jogadores.map(j => {
-      const ga = j.gols + j.assist, p = j.partidas || 0;
-      return { ...j, ga, gpj: p ? j.gols / p : 0, apj: p ? j.assist / p : 0, gapj: p ? ga / p : 0 };
-    });
-    state.porId = Object.fromEntries(state.jogadores.map(j => [j.id, j]));
-    state.comJogos = state.jogadores.filter(j => j.partidas > 0);
-    state.regulares = state.comJogos.filter(j => j.partidas >= MIN_JOGOS);
+    state.minBase = dados.min_jogos || 10;
     state.meses = dados.meses || [];
     state.mes = state.meses.at(-1)?.mes;
     [state.futs, state.cadastro] = await Promise.all([Db.carregarFuts(state.temporada), Db.carregarJogadores()]);
     state.fut = state.futs[0]?.id ?? null;
-    // série mês a mês de cada jogador do elenco
-    for (const j of state.jogadores) j.porMes = state.meses.map(m => m.jogadores.find(i => i.id === j.id) || { gols: 0, assist: 0 });
+    const jogadores = dados.jogadores.map(j => ({
+      ...j, ...comMedias({ partidas: j.partidas || 0, gols: j.gols, assist: j.assist, honras: j.honras }),
+      // série mês a mês de cada jogador do elenco
+      porMes: state.meses.map(m => m.jogadores.find(i => i.id === j.id) || { gols: 0, assist: 0 }),
+    }));
+    state.base = {
+      jogadores,
+      porId: Object.fromEntries(jogadores.map(j => [j.id, j])),
+      comJogos: jogadores.filter(j => j.partidas > 0),
+    };
+    const pedido = new URLSearchParams(location.search).get('periodo');
+    aplicarPeriodo(pedido === 'mes' ? pedido : 'temporada');
+  }
+
+  const comMedias = n => {
+    const ga = n.gols + n.assist, p = n.partidas;
+    return { ...n, ga, gpj: p ? n.gols / p : 0, apj: p ? n.assist / p : 0, gapj: p ? ga / p : 0 };
+  };
+
+  /* ---------------- Períodos ---------------- */
+  // Índices [de, ate) dos meses do período: mês = o último mês registrado
+  function faixaDoPeriodo(p) {
+    const t = state.meses.length;
+    return p === 'mes' ? [Math.max(0, t - 1), t] : [0, t];
+  }
+  const mesesDoPeriodo = p => state.meses.slice(...faixaDoPeriodo(p));
+  // Meses sem nenhum jogo lançado (aba Mês do admin): sem eles não dá para calcular médias por jogo
+  const mesesSemJogos = ms => ms.filter(m => !m.jogadores.some(i => i.partidas > 0));
+
+  // Números de um jogador num período: temporada = totais oficiais; recortes = soma dos meses
+  function numerosNoPeriodo(b, p) {
+    if (p === 'temporada') return { partidas: b.partidas, gols: b.gols, assist: b.assist, honras: b.honras };
+    const r = { partidas: 0, gols: 0, assist: 0, honras: {} };
+    for (const i of b.porMes.slice(...faixaDoPeriodo(p))) {
+      r.partidas += i.partidas || 0; r.gols += i.gols; r.assist += i.assist;
+      for (const [k, v] of Object.entries(i.honras || {})) r.honras[k] = (r.honras[k] || 0) + v;
+    }
+    return r;
+  }
+
+  function rotuloPeriodo(p, longo = false) {
+    const ms = mesesDoPeriodo(p);
+    if (p === 'temporada' || !ms.length) return longo ? `Temporada ${state.temporada}` : 'Temporada';
+    return longo ? `${nomeMes(ms[0].mes)}${ms[0].mes === mesAtual ? ' · em andamento' : ''}` : nomeMes(ms[0].mes);
+  }
+
+  // Troca o elenco "visível" (state.jogadores) pelos números do período; o resto do site lê daí.
+  function aplicarPeriodo(p) {
+    state.periodo = p !== 'temporada' && state.meses.length ? p : 'temporada';
+    const ms = mesesDoPeriodo(state.periodo);
+    state.mesesVis = ms;
+    state.semJogos = state.periodo === 'temporada' ? [] : mesesSemJogos(ms).map(m => nomeMes(m.mes));
+    state.semMedias = state.semJogos.length > 0;
+    state.minPeriodo = state.periodo === 'temporada' ? state.minBase : MINIMOS[state.periodo][0];
+    state.minJogos = state.minPeriodo;
+    state.jogadores = state.base.jogadores.map(b => {
+      const j = { ...b, ...comMedias(numerosNoPeriodo(b, state.periodo)), porMes: b.porMes.slice(...faixaDoPeriodo(state.periodo)) };
+      // jogos de algum mês faltando: a soma de jogos ficaria errada, então nada de jogos/médias
+      if (state.semMedias) Object.assign(j, { partidas: 0, gpj: 0, apj: 0, gapj: 0 });
+      return j;
+    });
+    state.porId = Object.fromEntries(state.jogadores.map(j => [j.id, j]));
+    state.comJogos = state.jogadores.filter(j => j.partidas > 0 || j.ga > 0);
+    state.regulares = state.comJogos.filter(j => j.partidas >= state.minPeriodo);
+    if (!ms.some(m => m.mes === state.mes)) state.mes = ms.at(-1)?.mes;
     calcularRanks();
     calcularAtributos();
   }
 
+  const precisaJogos = m => m.media || m.jogos;
+  function avisoMedias() {
+    if (state.semMedias) return `⏳ As médias por jogo de ${listaNomes(state.semJogos)} aparecem assim que os jogos do mês forem registrados.`;
+    if (!state.regulares.length) return `Ninguém com ${state.minPeriodo}+ jogos neste período ainda.`;
+    return '';
+  }
+
   // Valor usado para empate: o que aparece na tela (médias com 1 casa).
   const chave = (m, j) => m.media ? Math.round(m.val(j) * 10) / 10 : m.val(j);
-  const elegiveis = (m, min = MIN_JOGOS) =>
-    m.adms ? state.jogadores.filter(j => j.over?.ovr) : m.media ? state.comJogos.filter(j => j.partidas >= min) : state.comJogos;
+  const elegiveis = (m, min = state.minPeriodo) =>
+    m.adms ? state.jogadores.filter(j => j.over?.ovr) : state.semMedias && precisaJogos(m) ? []
+      : m.media ? state.comJogos.filter(j => j.partidas >= min) : state.comJogos;
 
   // Ranking denso: "1. Roger · 2. Felps · 3. Leo e Renato · 4. ..."
   function ranquear(metrica, lista = elegiveis(MET[metrica])) {
@@ -159,6 +237,17 @@
   // Radar dos números: posição de cada um em relação aos regulares (45 a 99)
   function calcularAtributos() {
     const base = state.regulares, n = base.length;
+    const media = (lista, f) => lista.reduce((t, j) => t + f(j), 0) / lista.length;
+    for (const j of state.comJogos) {
+      const fatia = j.ga ? j.gols / j.ga : 0;
+      j.pos = fatia >= .65 ? 'ATA' : fatia <= .5 ? 'MEI' : 'SA';
+      j.attrs = null; j.calc = 0;
+    }
+    const comNota = state.jogadores.filter(j => j.over?.pac);
+    state.mediaNotas = Object.fromEntries(NOTAS.map(([, , k]) => [k, media(comNota, j => j.over[k])]));
+    // radar dos números só com pelo menos 2 regulares (e jogos lançados) no período
+    state.mediaAttrs = null;
+    if (n < 2) return;
     for (const [sigla, , met] of ATRIBUTOS) {
       const vals = base.map(MET[met].val);
       const min = Math.min(...vals), max = Math.max(...vals);
@@ -171,15 +260,17 @@
         (j.attrs ||= {})[sigla] = Math.round(45 + 54 * (.55 * pct + .45 * mm));
       }
     }
-    for (const j of state.comJogos) {
-      j.calc = Math.round(ATRIBUTOS.reduce((s, [sigla, , , p]) => s + j.attrs[sigla] * p, 0));
-      const fatia = j.ga ? j.gols / j.ga : 0;
-      j.pos = fatia >= .65 ? 'ATA' : fatia <= .5 ? 'MEI' : 'SA';
-    }
-    const media = (lista, f) => lista.reduce((t, j) => t + f(j), 0) / lista.length;
+    for (const j of state.comJogos) j.calc = Math.round(ATRIBUTOS.reduce((s, [sigla, , , p]) => s + j.attrs[sigla] * p, 0));
     state.mediaAttrs = Object.fromEntries(ATRIBUTOS.map(([s]) => [s, media(base, j => j.attrs[s])]));
-    const comNota = state.jogadores.filter(j => j.over?.pac);
-    state.mediaNotas = Object.fromEntries(NOTAS.map(([, , k]) => [k, media(comNota, j => j.over[k])]));
+  }
+
+  // Corta a lista nas primeiras linhas e atualiza o botão "Ver todos" dela
+  function corte(chave, lista, total = lista.length) {
+    const btn = $(`[data-ver-mais="${chave}"]`), aberto = state.abertos.has(chave);
+    btn.hidden = total <= LIMITE_LINHAS;
+    btn.textContent = aberto ? 'Ver menos' : `Ver todos (${total})`;
+    btn.setAttribute('aria-expanded', aberto);
+    return aberto ? lista : lista.slice(0, LIMITE_LINHAS);
   }
 
   const lideresDe = (rs) => rs.filter(r => r.pos === 1 && r.valor > 0);
@@ -202,13 +293,18 @@
     const [ano, mes, dia] = state.atualizado.split('-');
     $('#atualizado').textContent = `${dia}/${mes}/${ano}`;
 
+    const p = state.periodo;
+    $('#hero-kicker').textContent = p === 'temporada'
+      ? `Temporada ${state.temporada} · estatísticas oficiais da pelada` : `${rotuloPeriodo(p, true)} · temporada ${state.temporada}`;
+    $('#hero-sub').textContent = p === 'temporada' ? 'Os donos da temporada' : `Os donos de ${rotuloPeriodo(p)}`;
+
     const js = state.comJogos;
     const soma = k => js.reduce((t, j) => t + j[k], 0);
     const kpis = [
       [soma('gols'), 'gols marcados', int],
       [soma('assist'), 'assistências', int],
       [js.length, 'jogadores', int],
-      [soma('ga') / (soma('partidas') || 1), 'G+A por jogador a cada jogo', dec],
+      state.semMedias ? [soma('ga'), 'G+A no total', int] : [soma('ga') / (soma('partidas') || 1), 'G+A por jogador a cada jogo', dec],
     ];
     $('#kpis').innerHTML = kpis.map(([v, r, f]) =>
       `<div class="kpi"><div class="kpi-valor num" data-contar="${v}" data-fmt="${f === dec ? 'dec' : 'int'}">${f(v)}</div><div class="kpi-rotulo">${r}</div></div>`).join('');
@@ -217,7 +313,7 @@
     const card = (ic, tit, rs, valor, un) => !rs.length ? '' : `<button class="lider" type="button" data-jogador="${rs[0].j.id}">
         <span class="lider-icone">${ic}</span>
         <span class="lider-titulo">${tit}</span>
-        <span class="lider-nome">${esc(nomes(rs))}</span>
+        <span class="lider-nome">${rs.length > 3 ? `${rs.length} jogadores` : esc(nomes(rs))}</span>
         <span class="lider-valor"><b class="num">${valor}</b> ${un}</span>
       </button>`;
     const porMet = (ic, tit, met, un) => { const rs = lideresDe(ranquear(met)); return card(ic, tit, rs, rs[0] && MET[met].fmt(rs[0].valor), un); };
@@ -226,7 +322,7 @@
       porMet('⚽', 'Artilheiro', 'gols', 'gols'),
       porMet('🎯', 'Garçom', 'assist', 'assistências'),
       porMet('👑', 'Rei do G+A', 'ga', 'G+A'),
-      porMet('⚡', 'Melhor média', 'gapj', `G+A por jogo · ${MIN_JOGOS}+ jogos`),
+      porMet('⚡', 'Melhor média', 'gapj', `G+A por jogo · ${state.minPeriodo}+ jogos`),
       porMet('🏟️', 'Mais presente', 'partidas', 'jogos'),
       porHonra('🥇', 'Mais MVPs', 'mvp_s', 'MVPs de fut'),
       porHonra('✅', 'Mais TOTW', 'totw', 'seleções da semana'),
@@ -266,19 +362,29 @@
     </li>`;
   }
 
-  // Detalhe cinza ao lado do nome nos rankings gerais: sempre com o número de jogos
-  const jogos = j => `${j.partidas} jogo${j.partidas === 1 ? '' : 's'}`;
-  const subGeral = (m, j) => m.id === 'partidas' ? '' : m.id === 'ga' ? `${j.gols}G · ${j.assist}A · ${jogos(j)}` : jogos(j);
+  // Detalhe cinza ao lado do nome nos rankings gerais: sempre com o número de jogos (quando o período tem jogos)
+  const jogos = j => state.semMedias ? '' : `${j.partidas} jogo${j.partidas === 1 ? '' : 's'}`;
+  const subGeral = (m, j) => m.id === 'partidas' ? '' : m.id === 'ga' ? [`${j.gols}G · ${j.assist}A`, jogos(j)].filter(Boolean).join(' · ') : jogos(j);
+
+  // Botões de mínimo de jogos conforme o período (temporada: 10+, 15+, 20+; mês: menos jogos)
+  function renderFiltroMin() {
+    const b = state.minBase;
+    const ops = state.periodo === 'temporada' ? [b, b + 5, b + 10, 1] : MINIMOS[state.periodo];
+    $('#filtro-min .seg').innerHTML = ops.map(n =>
+      `<button data-min="${n}"${n === state.minJogos ? ' class="ativo"' : ''}>${n === 1 ? 'Todos' : n + '+'}</button>`).join('');
+  }
 
   function renderRanking() {
     const m = MET[state.aba];
-    $('#filtro-min').hidden = !m.media;
+    $('#filtro-min').hidden = !m.media || state.semMedias;
     $('#nota-adms').hidden = !m.adms;
+    corte('ranking', []);
+    if (state.semMedias && precisaJogos(m)) { $('#ranking').innerHTML = `<li class="rank-vazio">${esc(avisoMedias())}</li>`; return; }
     const rs = ranquear(m.id, elegiveis(m, state.minJogos));
     if (!rs.length) { $('#ranking').innerHTML = '<li class="rank-vazio">Ninguém com esse mínimo de jogos.</li>'; return; }
     const max = rs[0].valor;
-    $('#ranking').innerHTML = rs.map((r, i) => {
-      const sub = subGeral(m, r.j) + (m.media && r.j.partidas < MIN_JOGOS ? ' · poucos jogos' : '');
+    $('#ranking').innerHTML = corte('ranking', rs).map((r, i) => {
+      const sub = subGeral(m, r.j) + (m.media && r.j.partidas < state.minPeriodo ? ' · poucos jogos' : '');
       return itemRanking(r, i, max, m.fmt, sub);
     }).join('');
   }
@@ -290,20 +396,21 @@
     const linhas = state.jogadores.filter(j => totalHonras(j, g) > 0)
       .sort((x, y) => totalHonras(y, g) - totalHonras(x, g) || x.nome.localeCompare(y.nome, 'pt'));
 
-    const destaques = (g === 's' ? ['mvp_s', 'totw', 'gart_s'] : ['potm', 'mvp_m', 'gart_m']).map(k => {
-      const h = HON[k];
-      const rs = topPor(state.jogadores, j => honra(j, k));
+    const podios = (g === 's' ? ['mvp_s', 'totw', 'gart_s'] : ['potm', 'mvp_m', 'gart_m']).map(k => ({ h: HON[k], rs: topPor(state.jogadores, j => honra(j, k)) }));
+    const maiorPodio = Math.max(...podios.map(x => x.rs.length));
+    const destaques = podios.map(({ h, rs }) => {
       return `<article class="podio">
         <header><span class="podio-ic">${h.ic}</span><div><b>${h.nome}</b><small>${h.desc} · ${rs.length} jogador${rs.length === 1 ? "" : "es"}</small></div></header>
-        <ol>${rs.map(r => `<li data-pos="${r.pos}" data-jogador="${r.j.id}"><span class="p">${r.pos}º</span><span class="n">${esc(r.j.nome)}</span><span class="v num">${r.valor}×</span></li>`).join('') || '<li class="vazio">Ninguém ainda</li>'}</ol>
+        <ol>${corte('podios', rs, maiorPodio).map(r => `<li data-pos="${r.pos}" data-jogador="${r.j.id}"><span class="p">${r.pos}º</span><span class="n">${esc(r.j.nome)}</span><span class="v num">${r.valor}×</span></li>`).join('') || '<li class="vazio">Ninguém ainda</li>'}</ol>
       </article>`;
     }).join('');
     $('#podios').innerHTML = destaques;
 
+    const visiveis = corte('honras', linhas);
     Charts.heatmap($('#g-honras'), {
-      linhas: linhas.map(j => ({ id: j.id, nome: j.nome })),
+      linhas: visiveis.map(j => ({ id: j.id, nome: j.nome })),
       colunas: colunas.map(h => ({ rotulo: h.ic, titulo: `${h.nome} (${GRUPO[h.g]})` })),
-      valores: linhas.map(j => colunas.map(h => honra(j, h.k))),
+      valores: visiveis.map(j => colunas.map(h => honra(j, h.k))),
       unidade: '×',
     });
     $('#legenda-honras').innerHTML = colunas.map(h => `<span><b>${h.ic}</b> ${h.nome}</span>`).join('');
@@ -317,30 +424,52 @@
   }
 
   /* ---------------- Temporada mês a mês ---------------- */
-  function renderMeses() {
-    if (!state.meses.length) { $('#mes-a-mes').hidden = true; return; }
-    $('#pilulas-mes').innerHTML = state.meses.map(m =>
-      `<button class="aba${m.mes === state.mes ? ' ativa' : ''}" data-mes="${m.mes}">${nomeMes(m.mes)}${m.mes === mesAtual ? ' <small>em andamento</small>' : ''}</button>`).join('');
+  // Itens de um mês com a pessoa (elenco ou convidado) para os rankings do mês
+  const itensDoMes = mes => mes.jogadores.map(i => ({
+    ...(state.base.porId[i.id] || { id: i.id, nome: i.nome, convidado: true }),
+    _i: { ...i, ga: i.gols + i.assist },
+  }));
 
-    const mes = state.meses.find(m => m.mes === state.mes);
-    const itens = mes.jogadores.map(i => ({ ...i, ga: i.gols + i.assist, j: state.porId[i.id] || { id: i.id, nome: i.nome, convidado: true } }));
-    const pessoa = i => ({ ...i.j, _i: i });
-    const top = (val) => topPor(itens.map(pessoa), p => val(p._i)).filter(r => r.pos === 1);
+  // Cards de destaque de um mês (POTM, MVP, artilheiro, garçom e, se pedido, o líder de G+A)
+  function cardsDoMes(mes, comGa = false) {
+    const itens = itensDoMes(mes);
+    const top = val => topPor(itens, p => val(p._i)).filter(r => r.pos === 1);
     const card = (ic, tit, rs, un) => `<div class="mes-card${rs.length ? '' : ' vazio'}" ${rs[0] ? `data-jogador="${rs[0].j.id}"` : ''}>
         <span class="lider-icone">${ic}</span><span class="lider-titulo">${tit}</span>
         <span class="lider-nome">${rs.length ? esc(nomes(rs)) : '—'}</span>
         <span class="lider-valor">${rs.length ? `<b class="num">${rs[0].valor}</b> ${un}` : 'ainda não definido'}</span>
       </div>`;
-    $('#mes-destaques').innerHTML = [
+    const cards = [
+      comGa ? card('👑', 'Líder de G+A', top(i => i.ga), 'G+A') : '',
       card('🏆', 'POTM', top(i => i.honras?.potm || 0), ''),
       card('🥇', 'MVP do mês', top(i => i.honras?.mvp_m || 0), ''),
       card('🥅', 'Artilheiro do mês', top(i => i.gols), 'gols'),
       card('🎁', 'Garçom do mês', top(i => i.assist), 'assistências'),
-    ].join('').replace(/<b class="num">1<\/b> <\/span>/g, '<b class="num">✓</b></span>');
+    ];
+    // no Momento (mês em andamento) os prêmios ainda não definidos vão para o fim da faixa
+    if (comGa) cards.sort((x, y) => x.includes(' vazio') - y.includes(' vazio'));
+    return cards.join('').replace(/<b class="num">1<\/b> <\/span>/g, '<b class="num">✓</b></span>');
+  }
+
+  // Seção mês a mês no período: com 1 mês só, corrida/histórico/mapa de calor não dizem nada e somem
+  function renderSecaoMeses() {
+    if (!state.meses.length) { $('#mes-a-mes').hidden = true; return; }
+    renderMeses();
+    const serie = state.mesesVis.length > 1;
+    ['#painel-corrida', '#painel-historico', '#painel-heat'].forEach(s => { $(s).hidden = !serie; });
+    if (serie) { renderCorrida(); renderHistorico(); renderHeatMeses(); }
+  }
+
+  function renderMeses() {
+    $('#pilulas-mes').innerHTML = state.mesesVis.map(m =>
+      `<button class="aba${m.mes === state.mes ? ' ativa' : ''}" data-mes="${m.mes}">${nomeMes(m.mes)}${m.mes === mesAtual ? ' <small>em andamento</small>' : ''}</button>`).join('');
+
+    const mes = state.meses.find(m => m.mes === state.mes);
+    $('#mes-destaques').innerHTML = cardsDoMes(mes);
 
     const rs = rankingMes();
     const max = rs[0]?.valor || 1;
-    $('#mes-ranking').innerHTML = rs.map((r, i) =>
+    $('#mes-ranking').innerHTML = corte('mes', rs).map((r, i) =>
       itemRanking(r, i, max, int, `${r.j._i.gols}G · ${r.j._i.assist}A${r.j.convidado ? ' · convidado' : ''}`)).join('')
       || '<li class="rank-vazio">Ninguém pontuou nesse quesito ainda.</li>';
     $('#mes-titulo').textContent = `${ROTULO_MET[state.mesMet]} em ${nomeMes(state.mes)}`;
@@ -403,7 +532,7 @@
 
     const rs = rankingFut();
     const max = rs[0]?.valor || 1;
-    $('#fut-ranking').innerHTML = rs.map((x, i) =>
+    $('#fut-ranking').innerHTML = corte('fut', rs).map((x, i) =>
       itemRanking(x, i, max, int, `${x.j._i.gols}G · ${x.j._i.assist}A · ${esc(x.j._i.time)}${x.j.convidado ? ' · convidado' : ''}`)).join('')
       || '<li class="rank-vazio">Ninguém pontuou nesse quesito.</li>';
     $('#fut-titulo').textContent = `${ROTULO_MET[state.futMet]} · fut de ${dataCurta(f.data)}`;
@@ -445,7 +574,7 @@
     botao.disabled = true;
     botao.textContent = 'Gerando…';
     try {
-      const r = await Exportar.ranking({ titulo, subtitulo, arquivo, itens: lista, temporada: state.temporada, site: location.host || 'fut-cdm.vercel.app', atualizado: `${dia}/${mes}/${ano}` });
+      const r = await Exportar.ranking({ titulo, subtitulo, arquivo, itens: lista, temporada: state.temporada, recorte: qual === 'geral' && state.periodo !== 'temporada' ? rotuloPeriodo(state.periodo) : '', site: location.host || 'fut-cdm.vercel.app', atualizado: `${dia}/${mes}/${ano}` });
       if (r === 'baixado') toast('Imagem baixada 📸');
     } catch (e) {
       console.error(e);
@@ -464,7 +593,7 @@
       return { id: j.id, nome: j.nome, valores: j.porMes.map(i => (acc += val(i))) };
     });
     const foco = state.focoCorrida;
-    Charts.corrida($('#g-corrida'), { meses: state.meses.map(m => curtoMes(m.mes)), series, foco });
+    Charts.corrida($('#g-corrida'), { meses: state.mesesVis.map(m => curtoMes(m.mes)), series, foco });
 
     // Resumo de quem está em destaque: total acumulado e posição na corrida
     const info = $('#corrida-info');
@@ -487,7 +616,7 @@
     const val = i => k === 'ga' ? i.gols + i.assist : i[k];
     const unidade = { gols: 'gols', assist: 'assist.', ga: 'G+A' }[k];
     // posição de cada id em cada mês (convidados contam na classificação do mês)
-    const posMes = state.meses.map(m => {
+    const posMes = state.mesesVis.map(m => {
       const rs = topPor(m.jogadores.map(i => ({ id: i.id, nome: i.nome || '', i })), x => val(x.i));
       return Object.fromEntries(rs.map(r => [r.j.id, r.pos]));
     });
@@ -502,7 +631,7 @@
     const destaques = geral
       ? [...series].sort((a, b) => b.brutos.reduce((t, v) => t + v, 0) - a.brutos.reduce((t, v) => t + v, 0)).slice(0, 3).map(s => s.id)
       : state.histSel;
-    Charts.historico($('#g-historico'), { meses: state.meses.map(m => curtoMes(m.mes)), series, destaques, modo: state.histModo, unidade });
+    Charts.historico($('#g-historico'), { meses: state.mesesVis.map(m => curtoMes(m.mes)), series, destaques, modo: state.histModo, unidade });
 
     $('#hist-chips').innerHTML = state.histSel.map((id, n) => {
       const e = Charts.ESTILOS[n];
@@ -516,13 +645,90 @@
   }
 
   function renderHeatMeses() {
-    const linhas = state.comJogos.filter(j => j.porMes.some(i => i.gols + i.assist)).sort((x, y) => y.ga - x.ga);
+    const linhas = corte('heat', state.comJogos.filter(j => j.porMes.some(i => i.gols + i.assist)).sort((x, y) => y.ga - x.ga));
     Charts.heatmap($('#g-heat-meses'), {
       linhas: linhas.map(j => ({ id: j.id, nome: j.nome })),
-      colunas: state.meses.map(m => ({ rotulo: curtoMes(m.mes), titulo: nomeMes(m.mes) })),
+      colunas: state.mesesVis.map(m => ({ rotulo: curtoMes(m.mes), titulo: nomeMes(m.mes) })),
       valores: linhas.map(j => j.porMes.map(i => i.gols + i.assist)),
       unidade: ' G+A',
     });
+  }
+
+  /* ---------------- Período, Momento e Análises ---------------- */
+  function renderPeriodo() {
+    const barra = $('#barra-periodo');
+    barra.hidden = !state.meses.length;
+    if (barra.hidden) return;
+    const ultimo = state.meses.at(-1).mes;
+    const sub = { temporada: state.temporada, mes: ultimo === mesAtual ? 'em andamento' : ultimo.slice(0, 4) };
+    $('#seg-periodo').innerHTML = PERIODOS.map(p =>
+      `<button data-periodo="${p}" aria-pressed="${p === state.periodo}"${p === state.periodo ? ' class="ativo"' : ''}><b>${esc(rotuloPeriodo(p))}</b><small>${esc(sub[p])}</small></button>`).join('');
+    $$('[data-periodo-rotulo]').forEach(el => { el.textContent = rotuloPeriodo(state.periodo, true); });
+  }
+
+  function trocarPeriodo(p) {
+    aplicarPeriodo(p);
+    const url = new URL(location.href);
+    if (state.periodo === 'temporada') url.searchParams.delete('periodo'); else url.searchParams.set('periodo', state.periodo);
+    history.replaceState(null, '', url);
+    renderTudo();
+  }
+
+  function renderTudo() {
+    renderPeriodo();
+    renderHero();
+    renderFiltroMin();
+    renderAbas();
+    renderRanking();
+    renderHonras();
+    renderMomento();
+    renderSecaoMeses();
+    renderAnalises();
+    if (state.a) definirDuelo(null, null, false);
+  }
+
+  // Finalizador × Garçom e Presença × Rendimento dependem de jogos: sem eles, aviso no lugar do gráfico
+  function renderAnalises() {
+    const aviso = avisoMedias();
+    $$('[data-aviso-medias]').forEach(el => { el.hidden = !aviso; el.textContent = aviso; });
+    ['#g-perfil', '#g-presenca'].forEach(s => { $(s).hidden = !!aviso; });
+    corte('composicao', state.comJogos);
+    Charts.atualizar(state.comJogos, state.regulares, state.abertos.has('composicao') ? Infinity : LIMITE_LINHAS);
+  }
+
+  function renderMomento() {
+    if (!state.meses.length) { $('#momento').hidden = true; return; }
+    const atual = state.meses.at(-1);
+    $('#momento-mes').textContent = `${nomeMes(atual.mes)}${atual.mes === mesAtual ? ' em andamento' : ''}`;
+    $('#momento-cards').innerHTML = cardsDoMes(atual, true);
+    renderEmAlta();
+  }
+
+  // Em alta / em queda: G+A por jogo no mês atual contra a média da temporada de cada um.
+  // Precisa dos jogos do mês (registrados pelas partidas do app ou lançados na aba Mês).
+  function renderEmAlta() {
+    const p = 'mes', min = MINIMOS[p][0];
+    const box = $('#momento-alta');
+    if (mesesSemJogos(mesesDoPeriodo(p)).length) {
+      $('#alta-desc').textContent = `Aparece assim que os jogos de ${rotuloPeriodo(p)} forem registrados.`;
+      box.innerHTML = '';
+      return;
+    }
+    const unidade = 'G+A/jogo';
+    $('#alta-desc').textContent = `${rotuloPeriodo(p, true)} contra a média da temporada de cada um, em ${unidade}. Só quem tem ${min}+ jogos no mês.`;
+    const itens = state.base.comJogos.map(b => {
+      const n = comMedias(numerosNoPeriodo(b, p));
+      return n.partidas >= min && b.partidas >= state.minBase ? { b, antes: b.gapj, agora: n.gapj, d: n.gapj - b.gapj } : null;
+    }).filter(Boolean);
+    const lista = (xs, cls) => xs.length ? xs.map(x => `<li data-jogador="${x.b.id}" tabindex="0">
+        <span class="alta-nome">${esc(x.b.nome)}<small>${dec(x.antes)} → ${dec(x.agora)} ${unidade}</small></span>
+        <b class="seta ${cls}">${x.d > 0 ? '↑ +' : '↓ '}${dec(x.d)}</b>
+      </li>`).join('') : '<li class="vazio">Ninguém por aqui</li>';
+    const sobe = itens.filter(x => x.d >= .05).sort((a, b) => b.d - a.d).slice(0, 5);
+    const desce = itens.filter(x => x.d <= -.05).sort((a, b) => a.d - b.d).slice(0, 5);
+    box.innerHTML = `
+      <div class="alta-col"><h4>🔥 Em alta</h4><ol>${lista(sobe, 'sobe')}</ol></div>
+      <div class="alta-col"><h4>🧊 Em queda</h4><ol>${lista(desce, 'desce')}</ol></div>`;
   }
 
   /* ---------------- Perfil ---------------- */
@@ -533,14 +739,14 @@
     const top3 = METRICAS.filter(m => j.ranks[m.id] > 1 && j.ranks[m.id] <= 3).map(m => m.rotulo);
     if (top3.length) b.push(['verde', `🔝 Top 3 em ${top3.join(', ')}`]);
     if (j.assist > j.gols) b.push(['verde', '🤝 Mais assiste do que marca']);
-    if (j.partidas >= MIN_JOGOS && j.gpj >= 3) b.push(['verde', '🔥 3+ gols por jogo']);
+    if (j.partidas >= state.minPeriodo && j.gpj >= 3) b.push(['verde', '🔥 3+ gols por jogo']);
     if (j.partidas >= 25) b.push(['verde', '📅 Não perde um jogo']);
     return b;
   }
 
   // Dados do cartão de exportação (imagem/PDF), no formato que o exportar.js desenha
   function dadosExportacao(j) {
-    const temJogos = j.partidas > 0;
+    const temJogos = j.partidas > 0 || j.ga > 0;
     const [ano, mes, dia] = state.atualizado.split('-');
     const primeiros = METRICAS.filter(m => j.ranks[m.id] === 1).map(m => m.rotulo);
     return {
@@ -552,10 +758,11 @@
       sub: temJogos ? `${POSICOES[j.pos]} · ${j.ga ? Math.round(j.gols / j.ga * 100) : 0}% do G+A em gols` : 'Sem jogos registrados na temporada',
       destaque: primeiros.length ? `1º em ${primeiros.slice(0, 3).join(', ')}` : '',
       nums: [['gols', 'Gols'], ['assist', 'Assistências'], ['ga', 'G+A'], ['partidas', 'Jogos'], ['gpj', 'Gols/jogo'], ['gapj', 'G+A/jogo']]
-        .map(([k, rotulo]) => ({ rotulo, valor: temJogos ? MET[k].fmt(MET[k].val(j)) : '—', pos: temJogos ? j.ranks[k] : null })),
+        .map(([k, rotulo]) => ({ rotulo, valor: temJogos && !(state.semMedias && precisaJogos(MET[k])) ? MET[k].fmt(MET[k].val(j)) : '—', pos: temJogos ? j.ranks[k] : null })),
+      recorte: state.periodo === 'temporada' ? '' : rotuloPeriodo(state.periodo),
       honrasS: HONRAS.filter(h => h.g === 's' && honra(j, h.k)).map(h => ({ ic: h.ic, nome: h.nome, n: honra(j, h.k) })),
       honrasM: HONRAS.filter(h => h.g === 'm' && honra(j, h.k)).map(h => ({ ic: h.ic, nome: h.nome, n: honra(j, h.k) })),
-      meses: state.meses.map((m, i) => ({ rotulo: curtoMes(m.mes), g: j.porMes[i]?.gols || 0, a: j.porMes[i]?.assist || 0 })),
+      meses: state.meses.map((m, i) => { const x = state.base.porId[j.id].porMes[i]; return { rotulo: curtoMes(m.mes), g: x?.gols || 0, a: x?.assist || 0 }; }),
       over: j.over ? { ovr: j.over.ovr ?? null, notas: NOTAS.map(([sigla, , k]) => ({ sigla, v: j.over[k] ?? null })) } : null,
       site: location.host || 'fut-cdm.vercel.app',
       atualizado: `${dia}/${mes}/${ano}`,
@@ -634,20 +841,23 @@
   function abrirPerfil(id) {
     const j = state.porId[id];
     if (!j) return abrirPerfilConvidado(id);
-    const temJogos = j.partidas > 0;
+    const b = state.base.porId[id];
+    const temJogos = j.partidas > 0 || j.ga > 0;
+    // sem jogos lançados no período: jogos e médias viram "—"
+    const mostra = m => temJogos && !(state.semMedias && precisaJogos(m)) ? m.fmt(m.val(j)) : '—';
     const posicoes = METRICAS.map(m => {
       const p = j.ranks[m.id];
-      return `<li><span>${m.rotulo}</span><span class="val">${temJogos ? m.fmt(m.val(j)) : '—'}</span><span class="pos ${p && p <= 3 ? 'p' + p : ''}">${ord(p)}</span></li>`;
+      return `<li><span>${m.rotulo}</span><span class="val">${mostra(m)}</span><span class="pos ${p && p <= 3 ? 'p' + p : ''}">${ord(p)}</span></li>`;
     }).join('');
     const nums = [['gols', 'Gols'], ['assist', 'Assist.'], ['partidas', 'Jogos'], ['ga', 'G+A'], ['gpj', 'Gols/jogo'], ['gapj', 'G+A/jogo']]
-      .map(([k, r]) => `<div class="perfil-num"><b class="num">${MET[k].fmt(MET[k].val(j))}</b><span>${r}</span> <em>${ord(j.ranks[k])}</em></div>`).join('');
+      .map(([k, r]) => `<div class="perfil-num"><b class="num">${mostra(MET[k])}</b><span>${r}</span> <em>${ord(j.ranks[k])}</em></div>`).join('');
     const trofeus = ['s', 'm'].map(g => {
       const hs = HONRAS.filter(h => h.g === g && honra(j, h.k));
       return hs.length ? `<div class="estante-grupo"><h4>${g === 's' ? 'Por fut' : 'No mês'}</h4><div class="estante">${hs.map(h =>
         `<div class="trofeu" title="${esc(h.desc)}"><span class="t-ic">${h.ic}</span><b class="num">${honra(j, h.k)}×</b><span>${h.nome}</span></div>`).join('')}</div></div>` : '';
     }).join('');
-    const sub = !temJogos ? 'Sem jogos registrados na temporada'
-      : `${POSICOES[j.pos]} · ${j.ga ? Math.round(j.gols / j.ga * 100) : 0}% do G+A em gols${j.partidas < MIN_JOGOS ? ` · menos de ${MIN_JOGOS} jogos, fora dos rankings de média` : ''}`;
+    const sub = !temJogos ? `Sem jogos registrados ${state.periodo === 'temporada' ? 'na temporada' : 'no período'}`
+      : `${POSICOES[j.pos]} · ${j.ga ? Math.round(j.gols / j.ga * 100) : 0}% do G+A em gols${!state.semMedias && j.partidas < state.minPeriodo ? ` · menos de ${state.minPeriodo} jogos, fora dos rankings de média` : ''}`;
 
     $('#perfil').innerHTML = `
       <div class="perfil-cab">
@@ -656,7 +866,7 @@
           ${j.foto ? `<img src="${esc(j.foto)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
         </div>
         <div class="perfil-info">
-          <p class="kicker">Temporada ${state.temporada}</p>
+          <p class="kicker">${esc(rotuloPeriodo(state.periodo, true))}</p>
           <h2 id="perfil-nome">${esc(j.nome)}</h2>
           <span class="perfil-tag">${sub}</span>
           ${temJogos ? `<div class="perfil-nums">${nums}</div>` : ''}
@@ -669,21 +879,22 @@
         </div>
       </div>
       <div class="perfil-grade">
+        ${state.meses.length && b.ga ? formaHtml(b) : ''}
         <article class="painel painel-largo">
           <h3>Estante de troféus</h3>
-          ${trofeus || '<p class="painel-desc">Ainda sem honrarias nesta temporada.</p>'}
+          ${trofeus || `<p class="painel-desc">Ainda sem honrarias ${state.periodo === 'temporada' ? 'nesta temporada' : 'neste período'}.</p>`}
         </article>
         ${temJogos ? `
-        <article class="painel">
+        ${j.attrs ? `<article class="painel">
           <h3>Números dos jogos</h3>
-          <p class="painel-desc">Calculado só com gols, assistências e jogos, em relação aos jogadores com ${MIN_JOGOS}+ jogos.</p>
+          <p class="painel-desc">Calculado só com gols, assistências e jogos, em relação aos jogadores com ${state.minPeriodo}+ jogos no período.</p>
           <div class="grafico" id="g-radar-perfil" style="height:300px"></div>
-        </article>
-        <article class="painel">
+        </article>` : ''}
+        <article class="painel${j.attrs ? '' : ' painel-largo'}">
           <h3>Posição nos rankings</h3>
           <ul class="posicoes">${posicoes}</ul>
         </article>` : ''}
-        ${state.meses.length && j.porMes.some(i => i.gols + i.assist) ? `
+        ${state.meses.length && b.porMes.some(i => i.gols + i.assist) ? `
         <article class="painel painel-largo">
           <div class="mes-perfil-cab">
             <h3>Mês a mês</h3>
@@ -710,7 +921,7 @@
     modal.hidden = false;
     document.body.classList.add('travado');
     $('.modal-caixa').scrollTop = 0;
-    if (temJogos) Charts.radar($('#g-radar-perfil'), [
+    if (temJogos && j.attrs) Charts.radar($('#g-radar-perfil'), [
       { nome: j.nome, valores: ATRIBUTOS.map(([s]) => j.attrs[s]), cor: 'acento' },
       { nome: 'Média do grupo', valores: ATRIBUTOS.map(([s]) => Math.round(state.mediaAttrs[s])), cor: 'neutro' },
     ], ATRIBUTOS);
@@ -731,13 +942,43 @@
   }
 
   function desenharMesesPerfil() {
-    const j = state.porId[state.perfilId], el = $('#g-meses-perfil');
+    const j = state.base.porId[state.perfilId], el = $('#g-meses-perfil');
     if (!j || !el) return;
     const met = state.perfilMet;
     Charts.barrasMes(el, {
       meses: state.meses.map(m => curtoMes(m.mes)), gols: j.porMes.map(i => i.gols), assist: j.porMes.map(i => i.assist),
-      metrica: met, mediaJogador: mediaMensal([j], met), mediaGrupo: mediaMensal(state.comJogos, met),
+      metrica: met, mediaJogador: mediaMensal([j], met), mediaGrupo: mediaMensal(state.base.comJogos, met),
     });
+  }
+
+  // Forma do jogador: temporada × mês atual, com ↑/↓ nas médias em relação à temporada
+  function formaHtml(b) {
+    const cols = PERIODOS.map(p => ({
+      p, n: comMedias(numerosNoPeriodo(b, p)),
+      ok: p === 'temporada' || !mesesSemJogos(mesesDoPeriodo(p)).length,
+    }));
+    const temp = cols[0].n;
+    const linhas = [['Jogos', 'partidas', int], ['Gols', 'gols', int], ['Assist.', 'assist', int], ['G+A', 'ga', int],
+      ['Gols/jogo', 'gpj', dec, true], ['Assist/jogo', 'apj', dec, true], ['G+A/jogo', 'gapj', dec, true]];
+    const celula = (c, [, k, fmt, porJogo]) => {
+      if ((porJogo || k === 'partidas') && !c.ok) return '<td class="sem">—</td>';
+      if (porJogo && !c.n.partidas) return '<td class="sem">—</td>';
+      const v = c.n[k], d = v - temp[k];
+      const seta = porJogo && c.p !== 'temporada' && temp.partidas && Math.abs(d) >= .05
+        ? ` <i class="seta ${d > 0 ? 'sobe' : 'desce'}" title="${d > 0 ? '+' : ''}${dec(d)} em relação à temporada">${d > 0 ? '↑' : '↓'}</i>` : '';
+      return `<td class="num">${fmt(v)}${seta}</td>`;
+    };
+    const falta = cols.some(c => !c.ok);
+    const curto = { temporada: 'Temporada', mes: rotuloPeriodo('mes') };
+    return `
+        <article class="painel painel-largo">
+          <h3>Forma</h3>
+          <p class="painel-desc">A temporada inteira contra o mês atual. As setas comparam as médias do mês com as da temporada.${falta ? ' “—” = jogos do mês ainda não registrados.' : ''}</p>
+          <div class="forma-box"><table class="forma">
+            <thead><tr><th></th>${cols.map(c => `<th${c.p === state.periodo ? ' class="atual"' : ''}>${esc(curto[c.p])}</th>`).join('')}</tr></thead>
+            <tbody>${linhas.map(l => `<tr><th>${l[0]}</th>${cols.map(c => celula(c, l)).join('')}</tr>`).join('')}</tbody>
+          </table></div>
+        </article>`;
   }
 
   function fecharPerfil() {
@@ -800,13 +1041,15 @@
     let r, corpo, aviso = '', unidade;
 
     if (state.modo === 'numeros') {
-      r = linhasDuelo(METRICAS.map(m => {
-        const max = Math.max(...elegiveis(m).map(m.val));
+      // sem jogos lançados no período, jogos e médias ficam de fora do placar
+      r = linhasDuelo(METRICAS.filter(m => !(state.semMedias && precisaJogos(m))).map(m => {
+        const max = Math.max(0, ...elegiveis(m).map(m.val));
         return [m.rotulo, chave(m, A), chave(m, B), m.fmt, max];
       }));
       unidade = 'estatísticas';
-      const poucos = [A, B].filter(j => j.partidas < MIN_JOGOS).map(j => j.nome);
-      if (poucos.length) aviso = `<p class="aviso">⚠️ ${esc(poucos.join(' e '))} ${poucos.length > 1 ? 'têm' : 'tem'} menos de ${MIN_JOGOS} jogos: as médias contam pouco.</p>`;
+      const poucos = [A, B].filter(j => j.partidas < state.minPeriodo).map(j => j.nome);
+      if (state.semMedias) aviso = `<p class="aviso">${esc(avisoMedias())}</p>`;
+      else if (poucos.length) aviso = `<p class="aviso">⚠️ ${esc(poucos.join(' e '))} ${poucos.length > 1 ? 'têm' : 'tem'} menos de ${state.minPeriodo} jogos: as médias contam pouco.</p>`;
       corpo = `
         <article class="painel">
           <h3>Estatística por estatística</h3>
@@ -826,7 +1069,7 @@
       corpo = `
         <article class="painel painel-largo">
           <h3>Honraria por honraria</h3>
-          <p class="painel-desc">Quantas vezes cada um ganhou cada prêmio na temporada. Barras na escala do recordista.</p>
+          <p class="painel-desc">Quantas vezes cada um ganhou cada prêmio ${state.periodo === 'temporada' ? 'na temporada' : 'no período'}. Barras na escala do recordista.</p>
           <div class="duelo-linhas">${r.html || '<p class="painel-desc">Nenhum dos dois tem honrarias ainda.</p>'}</div>
         </article>`;
     } else {
@@ -886,7 +1129,7 @@
   function ladoDuelo(j, lado) {
     const info = state.modo === 'notas' ? (j.over?.ovr ? `Overall ${j.over.ovr}` : 'sem overall')
       : state.modo === 'honras' ? `${totalHonras(j)} honrarias`
-      : `${j.partidas} jogos · ${j.gols}G · ${j.assist}A`;
+      : `${state.semMedias ? '' : `${j.partidas} jogos · `}${j.gols}G · ${j.assist}A`;
     return `<button class="duelista ${lado}" type="button" data-jogador="${j.id}" aria-label="Ver perfil de ${esc(j.nome)}">
       <span class="duelista-nome">${esc(j.nome)}</span>
       <span class="duelista-info">${info}</span>
@@ -904,7 +1147,7 @@
         .sort((x, y) => (norm(y.nome).startsWith(q) - norm(x.nome).startsWith(q)) || y.ga - x.ga || x.nome.localeCompare(y.nome, 'pt'));
       sel = 0;
       ul.innerHTML = itens.length
-        ? itens.map((j, i) => `<li role="option" data-id="${j.id}" aria-selected="${i === sel}">${esc(j.nome)}<small>${j.partidas ? `${j.gols}G · ${j.assist}A` : 'sem jogos'}</small></li>`).join('')
+        ? itens.map((j, i) => `<li role="option" data-id="${j.id}" aria-selected="${i === sel}">${esc(j.nome)}<small>${j.partidas || j.ga ? `${j.gols}G · ${j.assist}A` : 'sem jogos'}</small></li>`).join('')
         : '<li class="vazio">Ninguém com esse nome</li>';
       ul.classList.add('aberta');
     };
@@ -972,6 +1215,7 @@
   function ligarEventos() {
     grupo('#abas-ranking', 'aba', v => { state.aba = v; renderAbas(); renderRanking(); }, 'ativa');
     grupo('#filtro-min', 'min', v => { state.minJogos = +v; renderRanking(); });
+    grupo('#seg-periodo', 'periodo', trocarPeriodo);
     grupo('#seg-fatia', 'm', v => Charts.fatia(v));
     grupo('#seg-honras', 'g', v => { state.grupoHonras = v; renderHonras(); });
     grupo('#pilulas-mes', 'mes', v => { state.mes = v; renderMeses(); }, 'ativa');
@@ -990,6 +1234,14 @@
       const el = e.target.closest('[data-jogador]');
       if (el && !el.closest('#perfil')) location.hash = `jogador/${el.dataset.jogador}`;
       if (e.target.closest('[data-fechar]')) fecharPerfil();
+      const vm = e.target.closest('[data-ver-mais]');
+      if (vm) {
+        const k = vm.dataset.verMais, fechando = state.abertos.delete(k);
+        if (!fechando) state.abertos.add(k);
+        ({ ranking: renderRanking, podios: renderHonras, honras: renderHonras, mes: renderMeses, fut: renderFuts, heat: renderHeatMeses, composicao: renderAnalises })[k]();
+        // ao fechar, volta para o começo da lista (senão a pessoa fica lá embaixo, longe dela)
+        if (fechando) vm.previousElementSibling.scrollIntoView({ block: 'start' });
+      }
     });
     document.addEventListener('keydown', e => {
       if (e.key === 'Enter' && e.target.dataset?.jogador && e.target.matches('li')) location.hash = `jogador/${e.target.dataset.jogador}`;
@@ -1035,7 +1287,7 @@
       definirDuelo();
     });
     $('#btn-compartilhar').addEventListener('click', async () => {
-      const url = `${location.origin}${location.pathname}${urlDuelo()}`;
+      const url = `${location.origin}${location.pathname}${location.search}${urlDuelo()}`;
       try { await navigator.clipboard.writeText(url); toast('Link copiado! Manda no grupo 😎'); }
       catch { prompt('Copie o link:', url); }
     });
@@ -1060,17 +1312,12 @@
       console.error(e);
       return;
     }
-    renderHero();
-    renderAbas();
-    renderRanking();
-    renderHonras();
     renderGlossario();
-    renderMeses();
     renderFuts();
     // no celular "Buscar jogador…" não cabe ao lado do logo
     if (matchMedia('(max-width: 599px)').matches) $('#busca-global input').placeholder = 'Buscar…';
-    if (state.meses.length) { renderCorrida(); renderHistorico(); renderHeatMeses(); }
-    Charts.iniciar(state.jogadores, MIN_JOGOS);
+    Charts.iniciar();
+    renderTudo();
     // Duelo inicial: os 2 melhores regulares; no começo da temporada (ninguém com o mínimo de jogos)
     // usa quem já jogou, por G+A. Com menos de 2, o comparativo fica vazio esperando a escolha.
     const top = state.regulares.length >= 2

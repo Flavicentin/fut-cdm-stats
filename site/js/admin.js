@@ -342,22 +342,24 @@
     },
 
     mes: {
-      desc: 'Gols, assistências e honrarias de um mês (aba do mês). Ao aprovar, substitui o mês inteiro e soma a diferença nos totais da temporada de quem é do elenco. Jogos: atualize na aba Temporada.',
+      desc: 'Jogos, gols, assistências e honrarias de um mês (aba do mês). Ao aprovar, substitui o mês inteiro e soma a diferença de gols, assistências e honrarias nos totais da temporada de quem é do elenco. Os jogos do mês servem para as médias do mês atual no site; os jogos da temporada continuam na aba Temporada (encerrar partida já soma nos dois).',
       csv: 'do mês (ex.: Outubro)',
       podeAdicionar: true,
       podeRemover: true,
-      cols: () => [{ k: 'gols', r: 'Gols' }, { k: 'assist', r: 'Assist' }, ...colHonras()],
+      cols: () => [{ k: 'partidas', r: 'Jogos' }, { k: 'gols', r: 'Gols' }, { k: 'assist', r: 'Assist' }, ...colHonras()],
       async carregar() {
         st.meses = ok(await sb.from('meses').select('mes').eq('temporada_id', st.temporada).order('mes')).map(m => m.mes.slice(0, 7));
         if (!st.mes || (!st.meses.includes(st.mes) && !st.mesNovo)) st.mes = st.meses.at(-1) || new Date().toISOString().slice(0, 7);
-        const rows = ok(await sb.from('v_estatisticas_mes').select('id,gols,assist,honras,convidado')
+        const rows = ok(await sb.from('v_estatisticas_mes').select('id,partidas,gols,assist,honras,convidado')
           .eq('temporada', st.temporada).eq('mes', st.mes));
-        return rows.map(r => linha(r.id, { convidado: r.convidado, v: { gols: r.gols, assist: r.assist, ...r.honras } }));
+        return rows.map(r => linha(r.id, { convidado: r.convidado, v: { partidas: r.partidas, gols: r.gols, assist: r.assist, ...r.honras } }));
       },
       importar(tabela) {
         st.linhas = [];
         for (const l of tabela) {
           const v = { gols: inteiro(l.Gols), assist: inteiro(l.Assist) };
+          // a planilha do mês não tem jogos; se a coluna existir, usa; senão mantém o que estava gravado
+          v.partidas = l.Jogos != null ? inteiro(l.Jogos) : st.original.get(resolver(limpar(l.Jogadores)))?.v.partidas || 0;
           for (const [col, k] of Object.entries(HONRAS_CSV)) if (contar(l[col])) v[k] = contar(l[col]);
           if (!Object.values(v).some(Boolean)) continue;
           const row = acharOuCriar(l.Jogadores, true);
@@ -368,7 +370,7 @@
         linhas: st.linhas
           .filter(l => Object.values(l.v).some(Boolean))
           .map(l => ({
-            jogador_id: l.id, gols: l.v.gols || 0, assist: l.v.assist || 0,
+            jogador_id: l.id, partidas: l.v.partidas || 0, gols: l.v.gols || 0, assist: l.v.assist || 0,
             honras: Object.fromEntries(st.tipos.filter(t => l.v[t.id] > 0).map(t => [t.id, l.v[t.id]])),
           })),
       }),
