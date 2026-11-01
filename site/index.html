@@ -93,12 +93,7 @@
             <p class="painel-desc" id="alta-desc"></p>
             <div class="alta" id="momento-alta"></div>
           </article>
-          <article class="painel painel-largo" id="painel-corrida-mes" hidden>
-            <h3>Corrida do mês</h3>
-            <p class="painel-desc">G+A somado fut a fut, só com os futs registrados no app. Os três primeiros ficam em destaque.</p>
-            <div class="grafico" id="g-corrida-mes" style="height:380px"></div>
-          </article>
-          <article class="painel painel-largo">
+          <article class="painel painel-largo" data-arte-temporada>
             <div class="mes-perfil-cab">
               <h3>Gols e assistências por mês</h3>
               <div class="seg seg-pequeno" id="seg-meses-grupo" role="group" aria-label="Métrica do gráfico">
@@ -315,16 +310,52 @@
             <p class="painel-desc">Gols de cada time e o que cada um fez.</p>
             <div class="fut-times" id="fut-times"></div>
           </article>
+        </div>
+        <h3 class="sub-titulo">Gráficos do fut</h3>
+        <div class="grade-graficos">
           <article class="painel painel-largo">
+            <h3>Finalizador × Garçom do fut</h3>
+            <p class="painel-desc" id="fut-dispersao-desc"></p>
+            <div class="grafico" id="g-fut-dispersao"></div>
+          </article>
+          <article class="painel">
             <h3>Quem fez os gols de cada time</h3>
             <p class="painel-desc">Cada pedaço da barra é um jogador. Clique para abrir o perfil.</p>
             <div class="grafico" id="g-gols-time" style="height:280px"></div>
           </article>
-          <article class="painel painel-largo">
-            <h3>Gols em cada fut</h3>
-            <p class="painel-desc" id="gols-fut-desc"></p>
-            <div class="grafico" id="g-gols-fut" style="height:260px"></div>
+          <article class="painel">
+            <h3>Gols e assistências por time</h3>
+            <p class="painel-desc" id="times-ga-desc"></p>
+            <div class="grafico" id="g-times-ga" style="height:280px"></div>
           </article>
+        </div>
+        <div id="bloco-temporada-futs" hidden>
+          <h3 class="sub-titulo">A temporada fut a fut</h3>
+          <div class="grade-graficos">
+            <article class="painel painel-largo" data-arte-temporada>
+              <div class="mes-perfil-cab">
+                <h3>Gols e assistências em cada fut</h3>
+                <div class="seg seg-pequeno" id="seg-futs-grupo" role="group" aria-label="Métrica do gráfico">
+                  <button data-fg="ga" class="ativo">G+A</button>
+                  <button data-fg="gols">Gols</button>
+                  <button data-fg="assist">Assist.</button>
+                </div>
+              </div>
+              <p class="painel-desc" id="ga-futs-desc"></p>
+              <div class="grafico" id="g-ga-futs" style="height:300px"></div>
+            </article>
+            <article class="painel painel-largo" data-arte-temporada>
+              <h3>Equilíbrio dos times</h3>
+              <p class="painel-desc">A barra vai do time que menos fez gols ao que mais fez. Barra curta = times parelhos.</p>
+              <div class="grafico" id="g-equilibrio" style="height:300px"></div>
+            </article>
+            <article class="painel painel-largo" data-arte-temporada>
+              <h3>Jogador por fut</h3>
+              <p class="painel-desc">G+A de cada jogador em cada fut. Vazio = não jogou.</p>
+              <div class="grafico" id="g-jogador-fut"></div>
+              <button class="btn ver-mais" type="button" data-ver-mais="jogfut" hidden></button>
+            </article>
+          </div>
         </div>
       </div>
     </section>

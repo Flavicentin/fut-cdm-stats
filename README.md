@@ -8,9 +8,9 @@ Site público: https://fut-cdm.vercel.app · Admin: https://fut-cdm.vercel.app/a
 - **Fotos**: bucket `fotos-jogadores` no Supabase Storage (enviadas pelo admin, aba Fotos).
 
 ## Abas do site
-- **Temporada atual** (abre aqui): abre no último mês com dados, com os outros meses logo abaixo: donos do mês, números, último fut, ranking e gráficos. A corrida do mês precisa de 2+ futs no app, e as análises do mês, de jogos lançados; sem isso, esses gráficos somem.
+- **Temporada atual** (abre aqui): abre no último mês com dados, com os outros meses logo abaixo: donos do mês, números, último fut, ranking e gráficos. As análises do mês precisam de jogos lançados; sem isso, esses gráficos somem.
 - **Todos os dados**: totais, rankings, troféus, evolução e análises. Com 2 ou mais temporadas aparece o seletor, com a opção "Todas".
-- **Futs**: pódio dos melhores times da história (mais gols em um fut) e cada partida encerrada, escolhendo o mês e depois o fut, com gráficos de gols por time e por fut.
+- **Futs**: pódio dos melhores times da história (mais gols em um fut) e cada partida encerrada, escolhendo o mês e depois o fut. Abaixo, os gráficos do fut aberto e, com 2+ futs, os da temporada fut a fut.
 - **Comparar**: mano a mano, com período próprio.
 
 ## Admin (só adms)

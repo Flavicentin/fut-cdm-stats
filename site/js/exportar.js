@@ -314,6 +314,15 @@ window.Exportar = (() => {
     return entregar(doc.output('blob'), `fut-cdm-${d.id}-${d.temporada}.pdf`, `${d.nome} · Fut CDM ${d.temporada}`);
   }
 
+  // Marca, temporada, título e subtítulo das artes de ranking e de gráfico
+  function cabecalhoArte(ctx, W, M, d) {
+    ctx.fillStyle = COR.texto; ctx.font = `56px ${TITULO}`; ctx.fillText('FUT', M, 120);
+    ctx.fillStyle = COR.acento; ctx.fillText('CDM', M + ctx.measureText('FUT ').width, 120);
+    ctx.font = `700 24px ${TEXTO}`; ctx.textAlign = 'right'; ctx.fillText(d.recorte ? d.recorte.toUpperCase() : `TEMPORADA ${d.temporada}`, W - M, 116); ctx.textAlign = 'left';
+    ctx.fillStyle = COR.texto; textoAjustado(ctx, d.titulo.toUpperCase(), M, 222, W - 2 * M, 96, TITULO);
+    ctx.fillStyle = COR.texto2; textoAjustado(ctx, d.subtitulo || '', M, 264, W - 2 * M, 26, TEXTO, '500');
+  }
+
   /* Ranking (top 10) em imagem: d = { titulo, subtitulo, temporada, site, atualizado, itens: [{ pos, nome, iniciais, foto, valor, sub }] } */
   async function gerarCanvasRanking(d) {
     await fontesProntas();
@@ -324,11 +333,7 @@ window.Exportar = (() => {
       canvas.width = W; canvas.height = H;
       const ctx = canvas.getContext('2d');
       fundo(ctx, W, H);
-      ctx.fillStyle = COR.texto; ctx.font = `56px ${TITULO}`; ctx.fillText('FUT', M, 120);
-      ctx.fillStyle = COR.acento; ctx.fillText('CDM', M + ctx.measureText('FUT ').width, 120);
-      ctx.font = `700 24px ${TEXTO}`; ctx.textAlign = 'right'; ctx.fillText(d.recorte ? d.recorte.toUpperCase() : `TEMPORADA ${d.temporada}`, W - M, 116); ctx.textAlign = 'left';
-      ctx.fillStyle = COR.texto; textoAjustado(ctx, d.titulo.toUpperCase(), M, 222, W - 2 * M, 96, TITULO);
-      ctx.fillStyle = COR.texto2; textoAjustado(ctx, d.subtitulo || '', M, 264, W - 2 * M, 26, TEXTO, '500');
+      cabecalhoArte(ctx, W, M, d);
 
       const y0 = 296, hL = 92, gap = 0;
       d.itens.slice(0, 10).forEach((it, i) => {
@@ -383,5 +388,21 @@ window.Exportar = (() => {
     return entregar(blob, nome, `${d.titulo} · Fut CDM ${d.temporada}`);
   }
 
-  return { imagem, pdf, ranking, gerarCanvas, gerarCanvasRanking };
+  /* Gráfico em imagem: d = { titulo, subtitulo, temporada, recorte, site, atualizado, arquivo, desenhar } (desenhar devolve o canvas do gráfico) */
+  async function grafico(d) {
+    await fontesProntas();
+    const g = d.desenhar();
+    const W = 1080, M = 70, y0 = 296, altura = Math.round(g.height * (W - 2 * M) / g.width), H = y0 + altura + 130;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    fundo(ctx, W, H);
+    cabecalhoArte(ctx, W, M, d);
+    ctx.drawImage(g, M, y0, W - 2 * M, altura);
+    rodape(ctx, W, H, d);
+    const blob = await new Promise(ok => canvas.toBlob(ok, 'image/png'));
+    return entregar(blob, `fut-cdm-grafico-${d.arquivo}.png`, `${d.titulo} · Fut CDM ${d.temporada}`);
+  }
+
+  return { imagem, pdf, ranking, grafico, gerarCanvas, gerarCanvasRanking };
 })();

@@ -528,6 +528,7 @@ body.travado { overflow: hidden; }
 /* ---------------- Exportar ranking · Futs ---------------- */
 .exportar-ranking { display: flex; justify-content: flex-end; margin-top: 12px; }
 .exportar-ranking .btn:disabled { opacity: .6; cursor: wait; }
+.grafico[hidden] + .exportar-grafico { display: none; }
 .fut-placar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
 @media (min-width: 900px) { .fut-placar { grid-template-columns: repeat(4, 1fr); gap: 12px; } }
 .fut-time-placar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--borda-forte); }
@@ -618,10 +619,10 @@ body.travado { overflow: hidden; }
 }
 
 /* Gráficos de médias: altura menor no celular */
-#g-perfil, #g-perfil-mes { height: 440px; }
+#g-perfil, #g-perfil-mes, #g-fut-dispersao { height: 440px; }
 #g-presenca, #g-presenca-mes { height: 420px; }
 #g-perfil[hidden], #g-presenca[hidden] { display: none; }
-@media (max-width: 599px) { #g-perfil, #g-presenca, #g-perfil-mes, #g-presenca-mes { height: 340px; } }
+@media (max-width: 599px) { #g-perfil, #g-presenca, #g-perfil-mes, #g-presenca-mes, #g-fut-dispersao { height: 340px; } }
 
 /* ============ Temporada atual ============ */
 #secao-agora { padding-top: 28px; }

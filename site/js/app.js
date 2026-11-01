@@ -114,6 +114,7 @@
     perfilId: null,
     mesMet: 'ga',      // ranking do mês: gols | assist | ga | gpj | apj | gapj
     mesesMet: 'ga',    // gráfico de meses: ga | gols | assist
+    futsMet: 'ga',     // gráfico de futs: ga | gols | assist
     futs: [],          // futs encerrados (v_futs), do mais novo para o mais antigo
     fut: null,
     futMet: 'ga',
@@ -308,12 +309,12 @@
   }
 
   // Corta a lista nas primeiras linhas e atualiza o botão "Ver todos" dela
-  function corte(chave, lista, total = lista.length) {
+  function corte(chave, lista, total = lista.length, limite = LIMITE_LINHAS) {
     const btn = $(`[data-ver-mais="${chave}"]`), aberto = state.abertos.has(chave);
-    btn.hidden = total <= LIMITE_LINHAS;
+    btn.hidden = total <= limite;
     btn.textContent = aberto ? 'Ver menos' : `Ver todos (${total})`;
     btn.setAttribute('aria-expanded', aberto);
-    return aberto ? lista : lista.slice(0, LIMITE_LINHAS);
+    return aberto ? lista : lista.slice(0, limite);
   }
 
   const lideresDe = (rs) => rs.filter(r => r.pos === 1 && r.valor > 0);
@@ -539,7 +540,7 @@
     state.mes = chave;
     renderMes();
     renderAgoraFut();
-    renderGraficosMes();
+    renderMesesGrupo();
     renderAnalisesMes();
   }
 
@@ -585,38 +586,17 @@
     if (ultimo) renderEmAlta();
   }
 
-  // Corrida do mês (precisa de 2+ futs no app) e comparação com os outros meses
-  function renderGraficosMes() {
-    renderMesesGrupo();
-    renderCorridaMes();
-  }
-
   function renderMesesGrupo() {
     const soma = (m, k) => m.jogadores.reduce((t, i) => t + (i[k] || 0), 0);
     const k = state.mesesMet;
     const nome = { ga: 'G+A', gols: 'gols', assist: 'assistências' }[k];
     const media = state.meses.reduce((t, m) => t + (k === 'ga' ? soma(m, 'gols') + soma(m, 'assist') : soma(m, k)), 0) / state.meses.length;
     $('#meses-grupo-desc').textContent = `O mês aberto fica em destaque, e a linha é a média de ${dec(media)} ${nome} por mês. Clique em uma barra para abrir outro mês.`;
-    Charts.mesesGrupo($('#g-meses-grupo'), {
+    Charts.barrasGA($('#g-meses-grupo'), {
       metrica: k,
-      meses: state.meses.map(m => ({ rotulo: curtoMes(m.mes), nome: nomeMes(m.mes), gols: soma(m, 'gols'), assist: soma(m, 'assist') })),
+      itens: state.meses.map(m => ({ rotulo: curtoMes(m.mes), nome: nomeMes(m.mes), gols: soma(m, 'gols'), assist: soma(m, 'assist') })),
       ativo: state.meses.findIndex(m => m.mes === state.mes),
     }, p => { if (state.meses[p.dataIndex]) trocarMes(state.meses[p.dataIndex].mes); });
-  }
-
-  function renderCorridaMes() {
-    const futs = state.futs.filter(f => f.data.startsWith(state.mes)).reverse();
-    $('#painel-corrida-mes').hidden = futs.length < 2;
-    if (futs.length < 2) return;
-    const porId = {};
-    futs.forEach((f, i) => jogadoresDoFut(f).forEach(p => {
-      (porId[p.id] ||= { id: p.id, nome: p.nome, valores: futs.map(() => 0) }).valores[i] = p.ga;
-    }));
-    const series = Object.values(porId).map(s => {
-      let acc = 0;
-      return { ...s, valores: s.valores.map(v => (acc += v)) };
-    }).filter(s => s.valores.at(-1) > 0);
-    Charts.corrida($('#g-corrida-mes'), { meses: futs.map(f => dataCurta(f.data)), series, foco: null });
   }
 
   // Finalizador × Garçom e Presença × Rendimento do mês aberto; sem jogos lançados, os painéis somem
@@ -702,29 +682,81 @@
     $('#fut-a-fut').scrollIntoView({ behavior: 'instant' });
   }
 
-  // Até 12 futs: os mais recentes, ou os vizinhos quando o aberto é mais antigo
-  function janelaDeFuts(lista, i) {
-    const inicio = i >= lista.length - 12 ? Math.max(0, lista.length - 12) : Math.max(0, i - 6);
-    return lista.slice(inicio, inicio + 12);
+  // Até n futs: os mais recentes, ou os vizinhos quando o aberto é mais antigo
+  function janelaDeFuts(lista, i, n = 12) {
+    const inicio = i >= lista.length - n ? Math.max(0, lista.length - n) : Math.max(0, i - Math.floor(n / 2));
+    return lista.slice(inicio, inicio + n);
   }
 
-  // Os gráficos só mudam quando troca o fut (não a cada troca de métrica do ranking)
-  function renderGraficosFut(f) {
-    if (state.futDesenhado === f.id) return;
-    state.futDesenhado = f.id;
-    const gols = t => t.jogadores.filter(p => p.gols).sort((a, b) => b.gols - a.gols);
+  const timesDoFut = f => f.resumo.times.map((t, n) => ({ ...t, n })).filter(t => t.jogadores.length).sort((a, b) => b.gols - a.gols);
+  const assistDoTime = t => t.jogadores.reduce((s, p) => s + p.assist, 0);
+
+  function renderGraficosDoFut(f) {
+    const times = timesDoFut(f);
+    const pontuaram = t => t.jogadores.filter(p => p.gols + p.assist > 0);
+    const zerados = times.reduce((s, t) => s + t.jogadores.length - pontuaram(t).length, 0);
+    $('#fut-dispersao-desc').textContent = `Gols contra assistências de cada um neste fut. As linhas tracejadas são a média de quem pontuou.${zerados ? ` ${zerados === 1 ? '1 jogador zerado fica' : `${zerados} jogadores zerados ficam`} de fora.` : ''}`;
+    Charts.futDispersao($('#g-fut-dispersao'), { times: times.map(t => ({ nome: t.nome, n: t.n, jogadores: pontuaram(t) })) });
     Charts.golsPorTime($('#g-gols-time'), {
-      times: f.resumo.times.map((t, n) => ({ nome: t.nome, n, gols: t.gols, jogadores: gols(t) }))
-        .filter(t => t.jogadores.length).sort((a, b) => b.gols - a.gols),
+      times: times.map(t => ({ nome: t.nome, n: t.n, gols: t.gols, jogadores: t.jogadores.filter(p => p.gols).sort((a, b) => b.gols - a.gols) })).filter(t => t.jogadores.length),
     });
-    const totalDe = x => x.resumo.times.reduce((s, t) => s + t.gols, 0);
-    const lista = [...state.futs].reverse();
+    const timesGA = times.map(t => ({ nome: t.nome, gols: t.gols, assist: assistDoTime(t), assistidos: t.gols ? Math.min(100, Math.round(assistDoTime(t) / t.gols * 100)) : 0 }));
+    const ex = timesGA[0];
+    $('#times-ga-desc').textContent = `O % é a parte dos gols que teve assistência: ${ex.nome} fez ${ex.gols} gols e deu ${ex.assist} assistências, ou ${ex.assistidos}%. Quanto maior, mais coletivo foi o time.`;
+    Charts.timesGA($('#g-times-ga'), { times: timesGA });
+  }
+
+  const futsEmOrdem = () => [...state.futs].reverse();
+  const abrirFutDoGrafico = janela => p => { if (janela[p.dataIndex]) { state.fut = janela[p.dataIndex].id; renderFuts(); } };
+
+  // Blocos que olham para todos os futs: precisam de 2 ou mais para ter o que comparar
+  function renderTemporadaFutAFut() {
+    const lista = futsEmOrdem(), f = futAtual();
+    $('#bloco-temporada-futs').hidden = lista.length < 2;
+    if (lista.length < 2) return;
+    renderBarrasFuts();
     const janela = janelaDeFuts(lista, lista.indexOf(f));
-    Charts.golsPorFut($('#g-gols-fut'), {
-      futs: janela.map(x => ({ rotulo: dataCurta(x.data), gols: totalDe(x), ativo: x === f })),
-      media: lista.reduce((s, x) => s + totalDe(x), 0) / lista.length,
-    }, p => { state.fut = janela[p.dataIndex].id; renderFuts(); });
-    $('#gols-fut-desc').textContent = `${state.futs.length > 12 ? 'Até 12 futs perto do aberto, que' : 'O fut aberto'} fica em destaque. A linha é a média da temporada. Clique em uma barra para abrir o fut.`;
+    Charts.equilibrio($('#g-equilibrio'), {
+      futs: janela.map(x => {
+        const times = timesDoFut(x);
+        return { rotulo: dataCurta(x.data), nome: `Fut de ${dataCurta(x.data)}`, maior: times[0], menor: times.at(-1), ativo: x === f };
+      }),
+    }, abrirFutDoGrafico(janela));
+    renderJogadorFut();
+  }
+
+  function renderBarrasFuts() {
+    const lista = futsEmOrdem(), f = futAtual(), k = state.futsMet;
+    const numeros = x => {
+      const times = x.resumo.times.filter(t => t.jogadores.length);
+      return { rotulo: dataCurta(x.data), nome: `Fut de ${dataCurta(x.data)}`, gols: times.reduce((s, t) => s + t.gols, 0), assist: times.reduce((s, t) => s + assistDoTime(t), 0) };
+    };
+    const valor = n => k === 'ga' ? n.gols + n.assist : n[k];
+    const media = lista.reduce((s, x) => s + valor(numeros(x)), 0) / lista.length;
+    const janela = janelaDeFuts(lista, lista.indexOf(f));
+    const nome = { ga: 'G+A', gols: 'gols', assist: 'assistências' }[k];
+    $('#ga-futs-desc').textContent = `${lista.length > 12 ? 'Até 12 futs perto do aberto, que' : 'O fut aberto'} fica em destaque, e a linha é a média de ${dec(media)} ${nome} por fut na temporada. Clique em uma barra para abrir o fut.`;
+    Charts.barrasGA($('#g-ga-futs'), { itens: janela.map(numeros), ativo: janela.indexOf(f), metrica: k, media }, abrirFutDoGrafico(janela));
+  }
+
+  // Jogadores com mais G+A nos futs, nas colunas dos futs perto do aberto (no celular cabem menos colunas)
+  function renderJogadorFut() {
+    const lista = futsEmOrdem();
+    const janela = janelaDeFuts(lista, lista.indexOf(futAtual()), window.innerWidth < 600 ? 6 : 12);
+    const porId = {};
+    for (const x of lista) for (const p of jogadoresDoFut(x)) {
+      const j = porId[p.id] ||= { id: p.id, nome: p.nome, ga: 0, futs: {} };
+      j.ga += p.ga;
+      j.futs[x.id] = p.ga;
+    }
+    const ordem = Object.values(porId).sort((a, b) => b.ga - a.ga || a.nome.localeCompare(b.nome));
+    const linhas = corte('jogfut', ordem, ordem.length, 12);
+    Charts.heatmap($('#g-jogador-fut'), {
+      linhas: linhas.map(j => ({ id: j.id, nome: j.nome })),
+      colunas: janela.map(x => ({ rotulo: dataCurta(x.data), titulo: `Fut de ${dataCurta(x.data)}` })),
+      valores: linhas.map(j => janela.map(x => j.futs[x.id] ?? null)),
+      unidade: ' G+A', zeroConta: true,
+    });
   }
 
   function renderFuts() {
@@ -733,7 +765,12 @@
     $$('.nav a[href="#futs"]').forEach(a => { a.hidden = !state.futs.length; });
     if (!state.futs.length) return;
     const f = futAtual();
-    renderGraficosFut(f);
+    // Os gráficos só mudam quando troca o fut (não a cada troca de métrica do ranking)
+    if (state.futDesenhado !== f.id) {
+      state.futDesenhado = f.id;
+      renderGraficosDoFut(f);
+      renderTemporadaFutAFut();
+    }
     // Mês primeiro, depois só os futs dele: a lista não cresce junto com a temporada
     const mesDoFut = f.data.slice(0, 7);
     $('#pilulas-fut-mes').innerHTML = [...new Set(state.futs.map(x => x.data.slice(0, 7)))].map(m =>
@@ -800,12 +837,43 @@
       arquivo = `fut-${f.data}-${state.futMet}`;
     }
     if (!lista.length) return toast('Nada para exportar ainda.');
+    await gerarArte(botao, dadosDaArte => Exportar.ranking({ ...dadosDaArte, titulo, subtitulo, arquivo, itens: lista, temporada, recorte }));
+  }
+
+  // Assunto do gráfico na arte: mês, fut, temporada, jogador ou duelo, conforme onde ele está
+  function contextoDoGrafico(el) {
+    const f = futAtual(), [rota, id] = location.hash.slice(1).split('/');
+    const nome = i => (state.base.porId[i] || state.cadastro?.[i])?.nome;
+    if (el.closest('#aba-comparar') && rota === 'comparar') return { subtitulo: `${nome(state.a)} × ${nome(state.b)}`, sufixo: `${state.a}-${state.b}` };
+    if (rota === 'jogador') return { subtitulo: nome(decodeURIComponent(id)), sufixo: id };
+    if (el.closest('[data-arte-temporada]')) return { subtitulo: `Temporada ${state.temporada}`, sufixo: state.temporada };
+    if (el.closest('#aba-futs')) return { subtitulo: `Fut de ${dataCurta(f.data)}`, sufixo: f.data };
+    if (el.closest('#aba-agora')) return { subtitulo: nomeMes(state.mes), sufixo: state.mes };
+    return { subtitulo: rotuloRecorte(state.rec), sufixo: state.rec.chave };
+  }
+
+  async function exportarGrafico(id, botao) {
+    if (!window.Exportar) return;
+    const el = $(`#${id}`), painel = el.closest('.painel');
+    const { subtitulo, sufixo } = contextoDoGrafico(el);
+    const metrica = painel?.querySelector('.seg .ativo')?.textContent;
+    await gerarArte(botao, dadosDaArte => Exportar.grafico({
+      ...dadosDaArte,
+      titulo: painel?.querySelector('h3')?.textContent || 'Gráfico',
+      subtitulo: metrica ? `${metrica} · ${subtitulo}` : subtitulo,
+      temporada: state.temporada,
+      arquivo: `${id.replace(/^g-/, '')}-${sufixo}`,
+      desenhar: () => Charts.canvasDoGrafico(id),
+    }));
+  }
+
+  async function gerarArte(botao, gerar) {
     const [ano, mes, dia] = state.atualizado.split('-');
     const texto = botao.textContent;
     botao.disabled = true;
     botao.textContent = 'Gerando…';
     try {
-      const r = await Exportar.ranking({ titulo, subtitulo, arquivo, itens: lista, temporada, recorte, site: location.host || 'fut-cdm.vercel.app', atualizado: `${dia}/${mes}/${ano}` });
+      const r = await gerar({ site: location.host || 'fut-cdm.vercel.app', atualizado: `${dia}/${mes}/${ano}` });
       if (r === 'baixado') toast('Imagem baixada 📸');
     } catch (e) {
       console.error(e);
@@ -1510,6 +1578,7 @@
     });
     grupo('#seg-mes-rank', 'mr', v => { state.mesMet = v; renderMes(); });
     grupo('#seg-meses-grupo', 'mg', v => { state.mesesMet = v; renderMesesGrupo(); });
+    grupo('#seg-futs-grupo', 'fg', v => { state.futsMet = v; renderBarrasFuts(); });
     grupo('#pilulas-fut-mes', 'mesfut', v => { state.fut = state.futs.find(f => f.data.startsWith(v)).id; renderFuts(); }, 'ativa');
     grupo('#pilulas-fut', 'fut', v => { state.fut = +v; renderFuts(); });
     $('#melhores-times').addEventListener('click', abrirFutDoTime);
@@ -1518,6 +1587,8 @@
     document.addEventListener('click', e => {
       const b = e.target.closest('[data-exportar-ranking]');
       if (b) exportarRanking(b.dataset.exportarRanking, b);
+      const g = e.target.closest('[data-exportar-grafico]');
+      if (g) exportarGrafico(g.dataset.exportarGrafico, g);
     });
     grupo('#seg-corrida', 'c', v => { state.metricaCorrida = v; renderCorrida(); });
     grupo('#modos-duelo', 'modo', v => definirDuelo(null, null, true, v), 'ativa');
@@ -1531,7 +1602,7 @@
       if (vm) {
         const k = vm.dataset.verMais, fechando = state.abertos.delete(k);
         if (!fechando) state.abertos.add(k);
-        ({ ranking: renderRanking, podios: renderHonras, honras: renderHonras, mes: renderMes, fut: renderFuts, heat: renderHeatMeses })[k]();
+        ({ ranking: renderRanking, podios: renderHonras, honras: renderHonras, mes: renderMes, fut: renderFuts, heat: renderHeatMeses, jogfut: renderJogadorFut })[k]();
         // ao fechar, volta para o começo da lista (senão a pessoa fica lá embaixo, longe dela)
         if (fechando) vm.previousElementSibling.scrollIntoView({ block: 'start' });
       }
