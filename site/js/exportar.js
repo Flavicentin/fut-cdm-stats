@@ -404,5 +404,5 @@ window.Exportar = (() => {
     return entregar(blob, `fut-cdm-grafico-${d.arquivo}.png`, `${d.titulo} · Fut CDM ${d.temporada}`);
   }
 
-  return { imagem, pdf, ranking, grafico, gerarCanvas, gerarCanvasRanking };
+  return { imagem, pdf, ranking, grafico, gerarCanvas, gerarCanvasRanking, COR, TITULO, TEXTO, EMOJI, fontesProntas, carregarImagem, fundo, retangulo, textoAjustado, entregar };
 })();

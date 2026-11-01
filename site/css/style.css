@@ -581,7 +581,16 @@ body.travado { overflow: hidden; }
 @media (min-width: 720px) { .subnav { padding: 0 28px 10px; } }
 .seg-temporada { margin: 0 0 20px; }
 .seg-duelo { margin-bottom: 16px; }
-.seg-futs { flex-wrap: wrap; margin-bottom: 14px; }
+.seg-futs { flex-wrap: wrap; }
+.fut-escolha { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+#btn-video:disabled { opacity: .6; cursor: wait; }
+.video-caixa { display: grid; justify-items: center; gap: 10px; width: min(100%, 460px); }
+.video-caixa h3 { margin: 0; justify-self: start; }
+#video-canvas { width: min(100%, calc(62vh * 9 / 16)); height: auto; border-radius: 14px; background: #050806; }
+.video-progresso { width: 100%; height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.video-progresso i { display: block; width: 0; height: 100%; background: var(--acento); }
+#video-baixar[hidden] { display: none; }
+.video-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; width: 100%; }
 
 /* ============ Melhores times: pódio (no celular, rolagem lateral) ============ */
 #bloco-melhores .sub-titulo:first-child { margin-top: 0; margin-bottom: 4px; }

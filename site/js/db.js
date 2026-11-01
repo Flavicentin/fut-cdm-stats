@@ -42,6 +42,18 @@ window.Db = (() => {
     }
   }
 
+  // Lances de um fut, em ordem (view pública v_fut_lances). Sem Supabase ou sem a view: lista vazia.
+  async function carregarLances(futId) {
+    try {
+      const r = await fetch(`${supabaseUrl}/rest/v1/v_fut_lances?select=jogador,tipo,ordem&fut=eq.${encodeURIComponent(futId)}&order=ordem.asc`, {
+        headers: { apikey: supabaseKey },
+      });
+      return r.ok ? await r.json() : [];
+    } catch {
+      return [];
+    }
+  }
+
   // Nome e foto de todo mundo, inclusive convidados (que não vêm no JSON da temporada)
   async function carregarJogadores() {
     try {
@@ -52,5 +64,5 @@ window.Db = (() => {
     }
   }
 
-  return { carregarTemporadas, carregarFuts, carregarJogadores };
+  return { carregarTemporadas, carregarFuts, carregarLances, carregarJogadores };
 })();

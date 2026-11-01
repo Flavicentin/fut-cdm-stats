@@ -10,7 +10,7 @@ Site público: https://fut-cdm.vercel.app · Admin: https://fut-cdm.vercel.app/a
 ## Abas do site
 - **Temporada atual** (abre aqui): abre no último mês com dados, com os outros meses logo abaixo: donos do mês, números, último fut, ranking e gráficos. As análises do mês precisam de jogos lançados; sem isso, esses gráficos somem.
 - **Todos os dados**: totais, rankings, troféus, evolução e análises. Com 2 ou mais temporadas aparece o seletor, com a opção "Todas".
-- **Futs**: pódio dos melhores times da história (mais gols em um fut) e cada partida encerrada, escolhendo o mês e depois o fut. Abaixo, os gráficos do fut aberto e, com 2+ futs, os da temporada fut a fut.
+- **Futs**: pódio dos melhores times da história (mais gols em um fut) e cada partida encerrada, escolhendo o mês e depois o fut. Abaixo, os gráficos do fut aberto e, com 2+ futs, os da temporada fut a fut. O botão Gerar vídeo cria no navegador um Bar Chart Race do fut, com os lances da view `v_fut_lances`.
 - **Comparar**: mano a mano, com período próprio.
 
 ## Admin (só adms)

@@ -682,6 +682,74 @@
     $('#fut-a-fut').scrollIntoView({ behavior: 'instant' });
   }
 
+  /* ---------------- Vídeo do fut (Bar Chart Race) ---------------- */
+  const FRASE_ERRO_VIDEO = {
+    'aba-escondida': 'Parou porque a aba saiu da tela. Deixe o site aberto até terminar e tente de novo.',
+    'sem-formato': 'Este navegador não consegue gravar vídeo. Tente pelo Chrome ou pelo Safari.',
+  };
+
+  function dadosDoVideo(f, lances) {
+    const P = f.resumo.premios || {};
+    const raiz = getComputedStyle(document.documentElement);
+    const premio = (icone, titulo, k) => P[k]?.length ? [{ icone, titulo, nomes: P[k].map(p => p.nome).join(' & ') }] : [];
+    return {
+      data: f.data.split('-').reverse().join('/'), site: location.host || 'fut-cdm.vercel.app', lances,
+      times: f.resumo.times.map((t, n) => ({
+        n, nome: t.nome, gols: t.gols,
+        jogadores: t.jogadores.map(p => ({ ...p, iniciais: iniciais(p.nome), foto: fotoDe(p.id) })),
+      })).filter(t => t.jogadores.length),
+      cores: [0, 1, 2, 3].map(n => raiz.getPropertyValue(`--time-${n}`).trim()),
+      premios: [...premio('🥇', 'MVP', 'mvp_s'), ...premio('🥅', 'Artilheiro', 'art_s'), ...premio('🎁', 'Garçom', 'gar_s')],
+    };
+  }
+
+  let videoAtual = null;
+
+  async function abrirVideo() {
+    const f = futAtual(), botao = $('#btn-video'), texto = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = 'Buscando lances…';
+    const lances = await Db.carregarLances(f.id);
+    botao.disabled = false;
+    botao.textContent = texto;
+    if (!lances.length) return toast('Este fut ainda não tem lances disponíveis.');
+    const d = dadosDoVideo(f, lances);
+    if (!VideoFut.lancesConferem(d)) return toast('Os lances deste fut não batem com o placar. Vídeo indisponível.');
+
+    const sinal = { cancelado: false };
+    videoAtual = { sinal, resultado: null };
+    $('#video-titulo').textContent = `Vídeo do fut de ${dataCurta(f.data)}`;
+    $('#video-status').textContent = 'Gerando em tempo real. Deixe esta aba aberta e a tela ligada.';
+    $('#video-barra').style.width = '0';
+    $('#video-baixar').hidden = true;
+    $('#video-fechar').textContent = 'Cancelar';
+    $('#modal-video').hidden = false;
+    try {
+      const r = await VideoFut.gerar($('#video-canvas'), d, p => { $('#video-barra').style.width = `${p * 100}%`; }, sinal);
+      videoAtual.resultado = { ...r, nome: `fut-cdm-video-${f.data}.${r.extensao}`, titulo: `Fut de ${dataCurta(f.data)} · Fut CDM` };
+      $('#video-status').textContent = r.extensao === 'mp4' ? 'Vídeo pronto!' : 'Vídeo pronto, em WebM: pode não abrir em todos os apps, como o WhatsApp.';
+      $('#video-baixar').hidden = false;
+      $('#video-fechar').textContent = 'Fechar';
+    } catch (e) {
+      if (e.message === 'cancelado') return;
+      console.error(e);
+      $('#video-status').textContent = FRASE_ERRO_VIDEO[e.message] || 'Não foi possível gerar o vídeo. Tente de novo.';
+      $('#video-fechar').textContent = 'Fechar';
+    }
+  }
+
+  function fecharVideo() {
+    if (videoAtual) videoAtual.sinal.cancelado = true;
+    videoAtual = null;
+    $('#modal-video').hidden = true;
+  }
+
+  async function entregarVideo() {
+    const r = videoAtual?.resultado;
+    if (!r) return;
+    if (await Exportar.entregar(r.blob, r.nome, r.titulo) === 'baixado') toast('Vídeo baixado 🎬');
+  }
+
   // Até n futs: os mais recentes, ou os vizinhos quando o aberto é mais antigo
   function janelaDeFuts(lista, i, n = 12) {
     const inicio = i >= lista.length - n ? Math.max(0, lista.length - n) : Math.max(0, i - Math.floor(n / 2));
@@ -1579,6 +1647,9 @@
     grupo('#seg-mes-rank', 'mr', v => { state.mesMet = v; renderMes(); });
     grupo('#seg-meses-grupo', 'mg', v => { state.mesesMet = v; renderMesesGrupo(); });
     grupo('#seg-futs-grupo', 'fg', v => { state.futsMet = v; renderBarrasFuts(); });
+    $('#btn-video').addEventListener('click', abrirVideo);
+    $('#video-fechar').addEventListener('click', fecharVideo);
+    $('#video-baixar').addEventListener('click', entregarVideo);
     grupo('#pilulas-fut-mes', 'mesfut', v => { state.fut = state.futs.find(f => f.data.startsWith(v)).id; renderFuts(); }, 'ativa');
     grupo('#pilulas-fut', 'fut', v => { state.fut = +v; renderFuts(); });
     $('#melhores-times').addEventListener('click', abrirFutDoTime);

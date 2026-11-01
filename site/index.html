@@ -287,7 +287,10 @@
           <h3 class="sub-titulo" id="fut-a-fut">Fut a fut</h3>
         </div>
         <div class="abas" id="pilulas-fut-mes" role="tablist" aria-label="Escolher mês"></div>
-        <div class="seg seg-futs" id="pilulas-fut" role="group" aria-label="Escolher fut"></div>
+        <div class="fut-escolha">
+          <div class="seg seg-futs" id="pilulas-fut" role="group" aria-label="Escolher fut"></div>
+          <button class="btn" type="button" id="btn-video">🎬 Gerar vídeo</button>
+        </div>
         <div class="fut-placar" id="fut-placar"></div>
         <div class="mes-destaques" id="fut-destaques"></div>
         <div class="grade-graficos">
@@ -420,11 +423,26 @@
 
   <div class="toast" id="toast" role="status"></div>
 
+  <div class="modal" id="modal-video" hidden>
+    <div class="modal-fundo"></div>
+    <div class="modal-caixa video-caixa" role="dialog" aria-modal="true" aria-labelledby="video-titulo">
+      <h3 id="video-titulo">Vídeo do fut</h3>
+      <canvas id="video-canvas" width="1080" height="1920"></canvas>
+      <div class="video-progresso"><i id="video-barra"></i></div>
+      <p class="painel-desc" id="video-status"></p>
+      <div class="video-acoes">
+        <button class="btn" type="button" id="video-fechar">Cancelar</button>
+        <button class="btn" type="button" id="video-baixar" hidden>Baixar / Compartilhar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/db.js"></script>
   <script src="js/charts.js"></script>
   <script src="js/exportar.js"></script>
+  <script src="js/video.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
