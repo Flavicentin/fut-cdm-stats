@@ -3,32 +3,25 @@ window.Db = (() => {
   'use strict';
   const { supabaseUrl, supabaseKey } = window.FUT_CONFIG;
 
-  async function doSupabase(temporada) {
-    // Sem temporada pedida: a mais recente que já tem jogadores (uma temporada recém-criada fica de fora).
-    const filtro = temporada ? `temporada=eq.${encodeURIComponent(temporada)}` : 'order=temporada.desc&limit=5';
-    const r = await fetch(`${supabaseUrl}/rest/v1/v_temporada_json?select=dados&${filtro}`, {
+  // Todas as temporadas que já têm jogadores, da mais recente para a mais antiga
+  // (uma temporada recém-criada fica de fora).
+  async function doSupabase() {
+    const r = await fetch(`${supabaseUrl}/rest/v1/v_temporada_json?select=dados&order=temporada.desc`, {
       headers: { apikey: supabaseKey },
     });
     if (!r.ok) throw new Error(`Supabase respondeu ${r.status}`);
-    const linha = (await r.json()).find(l => l.dados?.jogadores?.length);
-    if (!linha) throw new Error('Temporada vazia no Supabase');
-    return linha.dados;
+    const lista = (await r.json()).map(l => l.dados).filter(d => d?.jogadores?.length);
+    if (!lista.length) throw new Error('Temporadas vazias no Supabase');
+    return lista;
   }
 
-  async function doJson(temporada) {
-    const t = temporada || (await fetch('data/temporadas.json').then(r => r.json()))[0];
-    return fetch(`data/${t}.json`).then(r => r.json());
+  async function doJson() {
+    const ids = await fetch('data/temporadas.json').then(r => r.json());
+    const lista = await Promise.all(ids.map(t => fetch(`data/${t}.json`).then(r => r.json())));
+    return lista.sort((a, b) => b.temporada.localeCompare(a.temporada));
   }
 
-  async function carregarTemporada(temporada) {
-    if (temporada) {
-      // temporada pedida no link (?temporada=); se não existir, cai na mais recente
-      try {
-        return await doSupabase(temporada);
-      } catch (e) {
-        console.warn(`Temporada ${temporada} indisponível, abrindo a mais recente:`, e.message);
-      }
-    }
+  async function carregarTemporadas() {
     try {
       return await doSupabase();
     } catch (e) {
@@ -59,5 +52,5 @@ window.Db = (() => {
     }
   }
 
-  return { carregarTemporada, carregarFuts, carregarJogadores };
+  return { carregarTemporadas, carregarFuts, carregarJogadores };
 })();

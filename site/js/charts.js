@@ -3,10 +3,6 @@ const Charts = (() => {
   'use strict';
 
   const registro = {};           // id do elemento -> { chart, montar }
-  let jogadores = [];            // com jogos registrados
-  let regulares = [];            // com o mínimo de jogos para médias
-  let metricaFatia = 'gols';
-  let limiteComposicao = Infinity;   // linhas visíveis na Composição (o resto abre em "Ver todos")
 
   const tok = n => getComputedStyle(document.documentElement).getPropertyValue('--' + n).trim();
   const dec = v => v.toFixed(1).replace('.', ',');
@@ -47,19 +43,20 @@ const Charts = (() => {
     ...extra,
   });
 
-  function montar(el, fn) {
+  function montar(el, fn, aoClicar = abrir) {
     if (!el) return;
     let r = registro[el.id];
     if (r && r.chart.getDom() !== el) { r.chart.dispose(); r = null; }
     const chart = r ? r.chart : echarts.init(el, null, { renderer: 'svg' });
-    if (!r) chart.on('click', abrir);
+    chart.off('click');
+    chart.on('click', aoClicar);
     registro[el.id] = { chart, montar: fn };
     if (r) chart.resize();   // a altura do container pode ter mudado (ex.: heatmap com outro nº de linhas)
     chart.setOption(fn(), true);
   }
 
   /* Finalizador × Garçom */
-  function opPerfil() {
+  function opPerfil(regulares) {
     if (!regulares.length) return { ...base(), series: [] };
     const mx = regulares.reduce((s, j) => s + j.gpj, 0) / regulares.length;
     const mostra = rotuloVisivel(regulares);
@@ -69,7 +66,7 @@ const Charts = (() => {
     return {
       ...base(),
       grid: g,
-      xAxis: eixo('Gols por jogo', { min: 0, max: v => Math.ceil(v.max + .4) }),
+      xAxis: eixo('Gols por jogo', { min: 0, max: v => Math.ceil(v.max + (estreito() ? 1 : .4)) }),
       yAxis: eixo('Assistências por jogo', { min: 0, max: v => Math.ceil(v.max + .3) }),
       graphic: [
         quad('COMPLETOS ↗', { right: g.right + 10, top: g.top + 8 }),
@@ -100,7 +97,7 @@ const Charts = (() => {
   }
 
   /* Presença × Rendimento */
-  function opPresenca() {
+  function opPresenca(regulares) {
     if (!regulares.length) return { ...base(), series: [] };
     const maxGa = Math.max(1, ...regulares.map(j => j.ga));
     const mostra = rotuloVisivel(regulares);
@@ -122,74 +119,6 @@ const Charts = (() => {
         labelLayout: { hideOverlap: true },
         data: regulares.map(j => ({ id: j.id, name: j.nome, ga: j.ga, value: [j.partidas, j.gapj] })),
       }],
-    };
-  }
-
-  /* Fatia do total */
-  function opFatia() {
-    const rot = { gols: 'gols', assist: 'assistências', ga: 'G+A' }[metricaFatia];
-    // Escala sequencial de um só tom: o verde do acento, mais opaco = maior fatia
-    const hex = tok('acento').replace('#', '');
-    const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
-    const ord = jogadores.map(j => ({ id: j.id, name: j.nome, value: j[metricaFatia] })).sort((a, b) => b.value - a.value);
-    // temporada sem nenhum jogo ainda: gráfico vazio (sem isso o site inteiro para de carregar)
-    if (!ord.length) return { ...base(), series: [] };
-    const total = ord.reduce((s, d) => s + d.value, 0);
-    const min = ord[ord.length - 1].value, max = ord[0].value;
-    const dados = ord.map(d => {
-      const a = .2 + .8 * (d.value - min) / (max - min || 1);
-      const forte = a > .6;
-      return {
-        ...d,
-        itemStyle: { color: `rgba(${r},${g},${b},${a.toFixed(2)})` },
-        label: { color: forte ? '#04150a' : tok('texto'), rich: { v: { color: forte ? '#04150a' : tok('texto-2') } } },
-      };
-    });
-    return {
-      ...base(),
-      tooltip: { ...base().tooltip, formatter: p => `<b>${esc(p.name)}</b><br>${p.value} ${rot} · ${(p.value / total * 100).toFixed(1).replace('.', ',')}% do total` },
-      series: [{
-        type: 'treemap',
-        roam: false, nodeClick: false, breadcrumb: { show: false },
-        width: '100%', height: '100%', top: 8, left: 0,
-        itemStyle: { borderColor: tok('surface'), borderWidth: 2, gapWidth: 2, borderRadius: 6 },
-        label: {
-          show: true, fontWeight: 700, fontSize: 12, lineHeight: 15,
-          formatter: p => `${p.name}\n{v|${(p.value / total * 100).toFixed(0)}%}`,
-          rich: { v: { fontSize: 11, fontWeight: 500 } },
-        },
-        upperLabel: { show: false },
-        data: dados,
-      }],
-    };
-  }
-
-  /* Composição do G+A */
-  function opComposicao() {
-    const ord = [...jogadores].sort((a, b) => b.ga - a.ga || b.gols - a.gols).slice(0, limiteComposicao);
-    const seg = (nome, k, cor, ultimo) => ({
-      name: nome, type: 'bar', stack: 'ga', barWidth: estreito() ? 14 : 18,
-      itemStyle: { color: cor, borderColor: tok('surface'), borderWidth: 1, borderRadius: ultimo ? [0, 4, 4, 0] : 0 },
-      emphasis: { focus: 'series' },
-      label: ultimo
-        ? { show: true, position: 'right', color: tok('texto'), fontWeight: 700, fontSize: 12, formatter: p => ord[p.dataIndex].ga }
-        : { show: !estreito(), position: 'insideRight', color: '#fff', fontSize: 11, fontWeight: 600, formatter: p => p.value >= 30 ? p.value : '' },
-      data: ord.map(j => ({ id: j.id, value: j[k] })),
-    });
-    return {
-      ...base(),
-      legend: { top: 0, left: 0, icon: 'roundRect', itemWidth: 12, itemHeight: 12, textStyle: { color: tok('texto-2'), fontWeight: 600 } },
-      grid: { left: 4, right: 40, top: 36, bottom: 8, containLabel: true },
-      tooltip: {
-        ...base().tooltip, trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: tok('acento-suave') } },
-        formatter: ps => {
-          const j = ord[ps[0].dataIndex];
-          return `<b>${esc(j.nome)}</b><br>${ps.map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>')}<br>G+A: <b>${j.ga}</b> · ${j.ga ? Math.round(j.gols / j.ga * 100) : 0}% em gols`;
-        },
-      },
-      xAxis: { type: 'value', axisLabel: { color: tok('texto-3'), fontSize: 11 }, splitLine: { lineStyle: { color: tok('borda'), type: [3, 4] } } },
-      yAxis: { type: 'category', inverse: true, data: ord.map(j => j.nome), axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: tok('texto'), fontWeight: 600, fontSize: 12 } },
-      series: [seg('Gols', 'gols', tok('s-gols'), false), seg('Assistências', 'assist', tok('s-assist'), true)],
     };
   }
 
@@ -313,7 +242,7 @@ const Charts = (() => {
     };
   }
 
-  /* Histórico de classificação: posição (ou total) de cada mês isolado.
+  /* Histórico de classificação: posição de cada mês isolado.
      Os escolhidos ganham cor, forma do ponto e nome na ponta; o resto fica em cinza. */
   const ESTILOS = [
     { cor: 's-a', simbolo: 'circle', tipo: 'solid' },
@@ -321,10 +250,9 @@ const Charts = (() => {
     { cor: 's-c', simbolo: 'triangle', tipo: 'solid' },
     { cor: 'texto', simbolo: 'diamond', tipo: [6, 4] },
   ];
-  function opHistorico({ meses, series, destaques, modo, unidade }) {
-    const pos = modo === 'pos';
+  function opHistorico({ meses, series, destaques, unidade }) {
     const maxPos = Math.max(1, ...series.flatMap(s => s.posicoes.filter(Boolean)));
-    const fmt = (s, i) => s.brutos[i] ? `${s.posicoes[i]}º · ${s.brutos[i]} ${unidade}` : `não pontuou${pos ? ` (fim da fila, ${s.posicoes[i]}º)` : ''}`;
+    const fmt = (s, i) => s.brutos[i] ? `${s.posicoes[i]}º · ${s.brutos[i]} ${unidade}` : `não pontuou (fim da fila, ${s.posicoes[i]}º)`;
     return {
       ...base(),
       grid: { left: 8, right: estreito() ? 80 : 110, top: 16, bottom: 8, containLabel: true },
@@ -338,23 +266,21 @@ const Charts = (() => {
         },
       },
       xAxis: { ...eixo(''), type: 'category', boundaryGap: false, data: meses, splitLine: { show: false } },
-      yAxis: pos
-        // marcas em 1º, 5º, 10º, 15º… (o 0 do eixo vira o rótulo do 1º lugar)
-        ? { ...eixo(''), type: 'value', inverse: true, min: 0, max: Math.ceil(maxPos / 5) * 5, interval: 5, axisLabel: { color: tok('texto-3'), fontSize: 11, formatter: v => `${v || 1}º` } }
-        : { ...eixo(''), type: 'value', min: 0 },
+      // marcas em 1º, 5º, 10º, 15º… (o 0 do eixo vira o rótulo do 1º lugar)
+      yAxis: { ...eixo(''), type: 'value', inverse: true, min: 0, max: Math.ceil(maxPos / 5) * 5, interval: 5, axisLabel: { color: tok('texto-3'), fontSize: 11, formatter: v => `${v || 1}º` } },
       series: series.map(s => {
         const k = destaques.indexOf(s.id), est = ESTILOS[k], d = k >= 0;
         const cor = d ? tok(est.cor) : tok('borda-forte');
         return {
           name: s.nome, type: 'line', id: s.id,
-          data: pos ? s.posicoes : s.brutos,
+          data: s.posicoes,
           symbol: d ? est.simbolo : 'circle', symbolSize: d ? 9 : 3, showSymbol: d,
           z: d ? 5 : 1, silent: !d && destaques.length > 0,
           lineStyle: { width: d ? 3 : 1, color: cor, type: d ? est.tipo : 'solid', opacity: d || !destaques.length ? 1 : .55 },
           itemStyle: { color: cor, borderColor: tok('surface'), borderWidth: 2 },
           emphasis: { focus: 'series', lineStyle: { width: d ? 3.5 : 2.5 } },
           blur: { lineStyle: { opacity: .2 } },
-          endLabel: d ? { show: true, formatter: p => `${s.nome}  ${pos ? (s.brutos.at(-1) ? p.value + 'º' : '—') : p.value}`, color: cor, fontWeight: 800, fontSize: 12 } : undefined,
+          endLabel: d ? { show: true, formatter: p => `${s.nome}  ${s.brutos.at(-1) ? p.value + 'º' : '—'}`, color: cor, fontWeight: 800, fontSize: 12 } : undefined,
           labelLayout: { moveOverlap: 'shiftY' },
         };
       }),
@@ -405,6 +331,91 @@ const Charts = (() => {
     };
   }
 
+  /* Gols, assistências ou G+A de cada mês, com o mês aberto em destaque e a média em tracejado */
+  function opMesesGrupo({ meses, ativo, metrica }) {
+    const total = m => metrica === 'ga' ? m.gols + m.assist : m[metrica];
+    const maior = Math.max(...meses.map(total));
+    const media = meses.reduce((s, m) => s + total(m), 0) / meses.length;
+    // Barra logo abaixo da média: o número vai para dentro dela, senão a linha o risca
+    const rente = m => total(m) <= media && media - total(m) <= maior * .09;
+    const seg = (nome, k, cor, topo) => ({
+      name: nome, type: 'bar', stack: 'm', barMaxWidth: 40, cursor: 'pointer',
+      data: meses.map((m, i) => ({
+        value: m[k], itemStyle: { opacity: i === ativo ? 1 : .4 },
+        label: topo && rente(m) ? { position: 'insideTop', color: '#fff' } : undefined,
+      })),
+      itemStyle: { color: cor, borderColor: tok('surface'), borderWidth: 2, borderRadius: topo ? [4, 4, 0, 0] : 0 },
+      label: topo ? { show: true, position: 'top', color: tok('texto'), fontWeight: 700, fontSize: 12, formatter: p => total(meses[p.dataIndex]) } : undefined,
+      markLine: topo ? {
+        silent: true, symbol: 'none', lineStyle: { color: tok('texto-2'), type: [6, 5], width: 1 },
+        // No celular o rótulo bateria nos números das barras: lá o valor fica só na descrição do painel
+        label: { show: !estreito(), position: 'insideStartTop', color: tok('texto-2'), fontSize: 11, fontWeight: 600, formatter: p => `média ${dec(p.value)}` },
+        data: [{ yAxis: media }],
+      } : undefined,
+    });
+    const gols = topo => seg('Gols', 'gols', tok('s-gols'), topo), assist = () => seg('Assistências', 'assist', tok('s-assist'), true);
+    return {
+      ...base(),
+      legend: metrica === 'ga' ? { top: 0, right: 0, selectedMode: false, itemWidth: 16, itemHeight: 10, textStyle: { color: tok('texto-2'), fontWeight: 600, fontSize: 12 } } : undefined,
+      grid: { left: 4, right: 4, top: metrica === 'ga' ? 34 : 18, bottom: 4, containLabel: true },
+      tooltip: {
+        ...base().tooltip, trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: tok('acento-suave') } },
+        formatter: ps => `<b>${esc(meses[ps[0].dataIndex].nome)}</b><br>${ps.map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>')}`
+          + (metrica === 'ga' ? `<br>G+A: <b>${total(meses[ps[0].dataIndex])}</b>` : ''),
+      },
+      xAxis: { type: 'category', data: meses.map(m => m.rotulo), axisTick: { show: false }, axisLine: { lineStyle: { color: tok('borda-forte') } }, axisLabel: { color: tok('texto-2'), fontSize: 11 } },
+      yAxis: { type: 'value', axisLabel: { color: tok('texto-3'), fontSize: 11 }, splitLine: { lineStyle: { color: tok('borda'), type: [3, 4] } } },
+      series: metrica === 'ga' ? [gols(false), assist()] : metrica === 'gols' ? [gols(true)] : [assist()],
+    };
+  }
+
+  /* Gols de cada time, um pedaço por jogador: nome quando cabe, só o número quando é estreito */
+  function opGolsPorTime({ times }, largura) {
+    const pxPorGol = (largura - 90) / Math.max(1, ...times.map(t => t.gols));
+    const rotulo = p => {
+      const px = p.gols * pxPorGol;
+      return px >= p.nome.length * 7 + 10 ? `${p.nome} ${p.gols}` : px >= 16 ? String(p.gols) : '';
+    };
+    return {
+      ...base(),
+      grid: { left: 4, right: 4, top: 4, bottom: 4, containLabel: true },
+      tooltip: { ...base().tooltip, formatter: p => `${p.marker}<b>${esc(p.data.nome)}</b><br>${p.data.value} ${p.data.value === 1 ? 'gol' : 'gols'} · ${esc(p.data.time)}` },
+      xAxis: { type: 'value', show: false, max: 'dataMax' },
+      yAxis: {
+        type: 'category', inverse: true, data: times.map(t => `${t.nome}  ${t.gols}`),
+        axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: tok('texto'), fontWeight: 700, fontSize: 12 },
+      },
+      series: times.flatMap((t, i) => t.jogadores.map(p => ({
+        name: p.nome, type: 'bar', stack: 't', barMaxWidth: 40, cursor: 'pointer',
+        data: times.map((_, k) => k === i ? { value: p.gols, id: p.id, nome: p.nome, time: t.nome } : null),
+        itemStyle: { color: tok(`time-${t.n}`), borderColor: tok('surface'), borderWidth: 2, borderRadius: 4 },
+        label: { show: true, position: 'inside', formatter: () => rotulo(p), color: t.n === 2 ? '#1a1300' : '#fff', fontWeight: 700, fontSize: 11 },
+      }))),
+    };
+  }
+
+  /* Total de gols de cada fut, com o fut aberto em destaque e a média em tracejado */
+  function opGolsPorFut({ futs, media }) {
+    return {
+      ...base(),
+      grid: { left: 4, right: 4, top: 22, bottom: 4, containLabel: true },
+      tooltip: { ...base().tooltip, formatter: p => `<b>Fut de ${p.name}</b><br>${p.value} gols` },
+      xAxis: { type: 'category', data: futs.map(f => f.rotulo), axisTick: { show: false }, axisLine: { lineStyle: { color: tok('borda-forte') } }, axisLabel: { color: tok('texto-2'), fontSize: 11 } },
+      yAxis: { type: 'value', show: false, min: 0 },
+      series: [{
+        type: 'bar', barMaxWidth: 44, cursor: 'pointer',
+        data: futs.map(f => ({ value: f.gols, itemStyle: { opacity: f.ativo ? 1 : .4 } })),
+        itemStyle: { color: tok('acento'), borderRadius: [4, 4, 0, 0] },
+        label: { show: true, position: 'top', color: tok('texto'), fontWeight: 700, fontSize: 12 },
+        markLine: {
+          silent: true, symbol: 'none', lineStyle: { color: tok('texto-3'), type: [6, 5], width: 1 },
+          label: { position: 'insideEndTop', color: tok('texto-3'), fontSize: 10, formatter: p => `média ${dec(p.value)}` },
+          data: [{ yAxis: media }],
+        },
+      }],
+    };
+  }
+
   // Liga o redimensionamento uma vez só
   function iniciar() {
     let t;
@@ -414,31 +425,29 @@ const Charts = (() => {
     });
   }
 
-  // Redesenha as análises com os jogadores do período (comJogos) e quem tem o mínimo de jogos (regulares)
-  function atualizar(comJogos, regs, limite = Infinity) {
-    jogadores = comJogos;
-    regulares = regs;
-    limiteComposicao = limite;
-    const comp = document.getElementById('g-composicao');
-    comp.style.height = `${Math.max(1, Math.min(jogadores.length, limite)) * 26 + 60}px`;
-    for (const id of ['g-perfil', 'g-presenca']) {
-      const el = document.getElementById(id);
-      if (!el.hidden) montar(el, id === 'g-perfil' ? opPerfil : opPresenca);
-    }
-    montar(document.getElementById('g-fatia'), opFatia);
-    montar(document.getElementById('g-composicao'), opComposicao);
-  }
-
   return {
     iniciar,
-    atualizar,
-    fatia(m) { metricaFatia = m; montar(document.getElementById('g-fatia'), opFatia); },
+    // Análises com quem tem o mínimo de jogos (da temporada ou do mês)
+    analises(elPerfil, elPresenca, regs) {
+      montar(elPerfil, () => opPerfil(regs));
+      montar(elPresenca, () => opPresenca(regs));
+    },
     radar(el, series, atributos, legenda = true, escala) { montar(el, () => opRadar(series, atributos, legenda, escala)); },
     heatmap(el, cfg) { el.style.height = `${cfg.linhas.length * 30 + 50}px`; montar(el, () => opHeatmap(cfg)); },
     corrida(el, cfg) { montar(el, () => opCorrida(cfg)); },
     historico(el, cfg) { montar(el, () => opHistorico(cfg)); },
     ESTILOS,
     barrasMes(el, cfg) { montar(el, () => opBarrasMes(cfg)); },
+    mesesGrupo(el, cfg, aoClicar) { montar(el, () => opMesesGrupo(cfg), aoClicar); },
+    golsPorTime(el, cfg) { montar(el, () => opGolsPorTime(cfg, el.clientWidth)); },
+    golsPorFut(el, cfg, aoClicar) { montar(el, () => opGolsPorFut(cfg), aoClicar); },
+    // Acerta o tamanho ao voltar para uma aba (só o que está na tela)
+    redimensionar() {
+      for (const [id, r] of Object.entries(registro)) {
+        const el = document.getElementById(id);
+        if (el && el === r.chart.getDom() && el.offsetParent) r.chart.resize();
+      }
+    },
     descartar(id) { if (registro[id]) { registro[id].chart.dispose(); delete registro[id]; } },
     retematizar() {
       for (const [id, r] of Object.entries(registro)) {

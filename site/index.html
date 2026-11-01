@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fut CDM 2026</title>
-  <meta name="description" content="Rankings, honrarias, temporada mês a mês e comparações dos jogadores do Fut CDM.">
+  <meta name="description" content="Último fut, mês em andamento, rankings da temporada, honrarias e comparações dos jogadores do Fut CDM.">
   <meta property="og:title" content="Fut CDM 2026 — Estatísticas">
   <meta property="og:description" content="Artilharia, assistências, médias e comparação entre jogadores.">
   <meta property="og:type" content="website">
@@ -26,14 +26,11 @@
         <span class="logo-texto">FUT <b>CDM</b></span>
         <span class="logo-ano" id="logo-ano">2026</span>
       </a>
-      <nav class="nav" aria-label="Seções">
-        <a href="#momento">Momento</a>
-        <a href="#rankings">Rankings</a>
-        <a href="#trofeus">Troféus</a>
-        <a href="#mes-a-mes">Mês a mês</a>
-        <a href="#futs">Futs</a>
-        <a href="#analises">Análises</a>
-        <a href="#comparar">Comparar</a>
+      <nav class="nav" aria-label="Abas">
+        <a href="#temporada-atual" data-nav="agora">Temporada atual</a>
+        <a href="#todos-os-dados" data-nav="temporada">Todos os dados</a>
+        <a href="#futs" data-nav="futs">Futs</a>
+        <a href="#comparar" data-nav="comparar">Comparar</a>
       </nav>
       <div class="busca" id="busca-global">
         <input type="search" placeholder="Buscar jogador…" aria-label="Buscar jogador" autocomplete="off">
@@ -45,42 +42,101 @@
         <svg class="ic-lua" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
       </button>
     </div>
-    <div class="barra-periodo" id="barra-periodo" hidden>
-      <div class="seg seg-periodo" id="seg-periodo" role="group" aria-label="Período dos números"></div>
-    </div>
+    <nav class="subnav" id="subnav" aria-label="Seções de todos os dados" hidden>
+      <a href="#totais">Totais</a>
+      <a href="#rankings">Rankings</a>
+      <a href="#trofeus">Troféus</a>
+      <a href="#evolucao">Evolução</a>
+      <a href="#analises">Análises</a>
+    </nav>
   </header>
 
   <main>
-    <!-- HERO -->
-    <section class="hero" id="inicio">
-      <div class="hero-campo" aria-hidden="true"></div>
-      <div class="wrap">
-        <p class="kicker" id="hero-kicker">Temporada <span data-temporada>2026</span> · estatísticas oficiais da pelada</p>
-        <h1 class="hero-titulo">FUT <span>CDM</span></h1>
-        <div class="kpis" id="kpis"></div>
-        <h2 class="sub-titulo" id="hero-sub">Os donos da temporada</h2>
-        <div class="lideres" id="lideres"></div>
-      </div>
-    </section>
-
-    <!-- MOMENTO -->
-    <section class="secao" id="momento">
+    <div class="aba-painel" id="aba-agora" hidden>
+    <!-- AGORA -->
+    <section class="secao" id="secao-agora">
       <div class="wrap">
         <header class="secao-cab">
           <div>
-            <p class="kicker">Agora</p>
-            <h2>Momento</h2>
+            <p class="kicker" id="agora-kicker"><span data-temporada>2026</span></p>
+            <h2 id="momento-mes">Temporada atual</h2>
           </div>
         </header>
-        <h3 class="momento-tit" id="momento-mes">Mês atual</h3>
-        <div class="momento-cards" id="momento-cards"></div>
-        <div class="grade-graficos">
-          <article class="painel">
+        <div data-agora-mes hidden>
+          <div class="abas" id="pilulas-mes" role="tablist" aria-label="Escolher mês"></div>
+          <h3 class="sub-titulo">Os donos do mês</h3>
+          <div class="momento-cards" id="momento-cards"></div>
+          <div class="kpis kpis-mes" id="kpis-mes"></div>
+        </div>
+        <article class="painel agora-fut" id="agora-fut" hidden></article>
+        <div data-agora-mes hidden>
+          <div class="grade-graficos">
+          <article class="painel" id="painel-mes-ranking">
+            <div class="mes-perfil-cab">
+              <h3 id="mes-titulo">G+A do mês</h3>
+              <div class="seg seg-pequeno" id="seg-mes-rank" role="group" aria-label="Ranking do mês">
+                <button data-mr="gols">Gols</button>
+                <button data-mr="assist">Assist.</button>
+                <button data-mr="ga" class="ativo">G+A</button>
+                <button data-mr="gpj" hidden>Gols/jogo</button>
+                <button data-mr="apj" hidden>Assist/jogo</button>
+                <button data-mr="gapj" hidden>G+A/jogo</button>
+              </div>
+            </div>
+            <p class="painel-desc" id="mes-desc">Todo mundo que marcou ou deu assistência no mês.</p>
+            <ol class="ranking ranking-compacto" id="mes-ranking"></ol>
+            <button class="btn ver-mais" type="button" data-ver-mais="mes" hidden></button>
+            <div class="exportar-ranking"><button class="btn" data-exportar-ranking="mes">📸 Exportar top 10</button></div>
+          </article>
+          <article class="painel" id="painel-alta">
             <h3>Em alta / em queda</h3>
             <p class="painel-desc" id="alta-desc"></p>
             <div class="alta" id="momento-alta"></div>
           </article>
+          <article class="painel painel-largo" id="painel-corrida-mes" hidden>
+            <h3>Corrida do mês</h3>
+            <p class="painel-desc">G+A somado fut a fut, só com os futs registrados no app. Os três primeiros ficam em destaque.</p>
+            <div class="grafico" id="g-corrida-mes" style="height:380px"></div>
+          </article>
+          <article class="painel painel-largo">
+            <div class="mes-perfil-cab">
+              <h3>Gols e assistências por mês</h3>
+              <div class="seg seg-pequeno" id="seg-meses-grupo" role="group" aria-label="Métrica do gráfico">
+                <button data-mg="ga" class="ativo">G+A</button>
+                <button data-mg="gols">Gols</button>
+                <button data-mg="assist">Assist.</button>
+              </div>
+            </div>
+            <p class="painel-desc" id="meses-grupo-desc"></p>
+            <div class="grafico" id="g-meses-grupo" style="height:300px"></div>
+          </article>
+          <article class="painel painel-largo" data-mes-analise hidden>
+            <h3>Finalizador × Garçom</h3>
+            <p class="painel-desc">Gols por jogo contra assistências por jogo no mês, com quem tem 2+ jogos. As linhas tracejadas são a média do grupo.</p>
+            <div class="grafico" id="g-perfil-mes"></div>
+          </article>
+          <article class="painel painel-largo" data-mes-analise hidden>
+            <h3>Presença × Rendimento</h3>
+            <p class="painel-desc">Partidas no mês contra G+A por jogo, com quem tem 2+ jogos. Bolha maior = mais G+A no total.</p>
+            <div class="grafico" id="g-presenca-mes"></div>
+          </article>
+          </div>
         </div>
+      </div>
+    </section>
+    </div>
+
+    <div class="aba-painel" id="aba-temporada" hidden>
+    <!-- HERO -->
+    <section class="hero" id="totais">
+      <div class="hero-campo" aria-hidden="true"></div>
+      <div class="wrap">
+        <p class="kicker" id="hero-kicker">Temporada <span data-temporada>2026</span> · estatísticas oficiais da pelada</p>
+        <h1 class="hero-titulo">FUT <span>CDM</span></h1>
+        <div class="seg seg-temporada" id="seg-temporada" role="group" aria-label="Temporada" hidden></div>
+        <div class="kpis" id="kpis"></div>
+        <h2 class="sub-titulo" id="hero-sub">Os donos da temporada</h2>
+        <div class="lideres" id="lideres"></div>
       </div>
     </section>
 
@@ -89,7 +145,7 @@
       <div class="wrap">
         <header class="secao-cab">
           <div>
-            <p class="kicker">Tabela · <span data-periodo-rotulo></span></p>
+            <p class="kicker">Tabela · <span data-rotulo-temporada></span></p>
             <h2>Rankings</h2>
           </div>
           <div class="filtro-min" id="filtro-min" hidden>
@@ -110,7 +166,7 @@
       <div class="wrap">
         <header class="secao-cab">
           <div>
-            <p class="kicker">Honrarias · <span data-periodo-rotulo></span></p>
+            <p class="kicker">Honrarias · <span data-rotulo-temporada></span></p>
             <h2>Sala de Troféus</h2>
           </div>
           <div class="seg" id="seg-honras" role="group" aria-label="Tipo de honraria">
@@ -134,33 +190,17 @@
       </div>
     </section>
 
-    <!-- MÊS A MÊS -->
-    <section class="secao" id="mes-a-mes">
+    <!-- EVOLUÇÃO -->
+    <section class="secao" id="evolucao">
       <div class="wrap">
         <header class="secao-cab">
           <div>
-            <p class="kicker">Linha do tempo</p>
-            <h2>Temporada mês a mês</h2>
+            <p class="kicker">Mês a mês · <span data-rotulo-temporada></span></p>
+            <h2>Evolução</h2>
           </div>
         </header>
-        <div class="abas" id="pilulas-mes" role="tablist"></div>
-        <div class="mes-destaques" id="mes-destaques"></div>
         <div class="grade-graficos">
-          <article class="painel">
-            <div class="mes-perfil-cab">
-              <h3 id="mes-titulo">G+A do mês</h3>
-              <div class="seg seg-pequeno" id="seg-mes-rank" role="group" aria-label="Ranking do mês">
-                <button data-mr="ga" class="ativo">G+A</button>
-                <button data-mr="gols">Gols</button>
-                <button data-mr="assist">Assist.</button>
-              </div>
-            </div>
-            <p class="painel-desc" id="mes-desc">Todo mundo que marcou ou deu assistência no mês.</p>
-            <ol class="ranking ranking-compacto" id="mes-ranking"></ol>
-            <button class="btn ver-mais" type="button" data-ver-mais="mes" hidden></button>
-            <div class="exportar-ranking"><button class="btn" data-exportar-ranking="mes">📸 Exportar top 10</button></div>
-          </article>
-          <article class="painel" id="painel-corrida">
+          <article class="painel painel-largo" id="painel-corrida">
             <h3>Corrida da temporada</h3>
             <p class="painel-desc">Acumulado mês a mês. Os 3 primeiros em destaque. Procure seu nome para ver sua linha em dourado.</p>
             <div class="corrida-ctrl">
@@ -182,10 +222,6 @@
             <h3>Histórico de classificação</h3>
             <p class="painel-desc">Cada mês conta sozinho: a posição de cada um só com os números daquele mês. Escolha até 4 jogadores para comparar.</p>
             <div class="corrida-ctrl">
-              <div class="seg seg-pequeno" id="seg-hist-modo" role="group" aria-label="Visualização">
-                <button data-hm="pos" class="ativo">Posição no mês</button>
-                <button data-hm="valor">Total no mês</button>
-              </div>
               <div class="seg seg-pequeno" id="seg-hist-met" role="group" aria-label="Métrica">
                 <button data-hmet="gols">Gols</button>
                 <button data-hmet="assist">Assist.</button>
@@ -212,8 +248,36 @@
       </div>
     </section>
 
+    <!-- ANÁLISES -->
+    <section class="secao" id="analises">
+      <div class="wrap">
+        <header class="secao-cab">
+          <div>
+            <p class="kicker">Gráficos · <span data-rotulo-temporada></span></p>
+            <h2>Análises</h2>
+          </div>
+        </header>
+        <div class="grade-graficos">
+          <article class="painel painel-largo">
+            <h3>Finalizador × Garçom</h3>
+            <p class="painel-desc">Gols por jogo contra assistências por jogo. As linhas tracejadas são a média do grupo.</p>
+            <p class="aviso" data-aviso-medias hidden></p>
+            <div class="grafico" id="g-perfil"></div>
+          </article>
+          <article class="painel painel-largo">
+            <h3>Presença × Rendimento</h3>
+            <p class="painel-desc">Partidas jogadas contra G+A por jogo. Bolha maior = mais G+A no total.</p>
+            <p class="aviso" data-aviso-medias hidden></p>
+            <div class="grafico" id="g-presenca"></div>
+          </article>
+        </div>
+      </div>
+    </section>
+    </div>
+
+    <div class="aba-painel" id="aba-futs" hidden>
     <!-- FUTS (cada partida encerrada) -->
-    <section class="secao" id="futs" hidden>
+    <section class="secao" id="futs">
       <div class="wrap">
         <header class="secao-cab">
           <div>
@@ -221,7 +285,14 @@
             <h2>Futs</h2>
           </div>
         </header>
-        <div class="abas" id="pilulas-fut" role="tablist"></div>
+        <div id="bloco-melhores" hidden>
+          <h3 class="sub-titulo">Melhores times da história</h3>
+          <p class="painel-desc">Os times que mais fizeram gols em um fut. No empate, ganha quem deu mais assistências.</p>
+          <ol class="melhores-times" id="melhores-times"></ol>
+          <h3 class="sub-titulo" id="fut-a-fut">Fut a fut</h3>
+        </div>
+        <div class="abas" id="pilulas-fut-mes" role="tablist" aria-label="Escolher mês"></div>
+        <div class="seg seg-futs" id="pilulas-fut" role="group" aria-label="Escolher fut"></div>
         <div class="fut-placar" id="fut-placar"></div>
         <div class="mes-destaques" id="fut-destaques"></div>
         <div class="grade-graficos">
@@ -244,58 +315,28 @@
             <p class="painel-desc">Gols de cada time e o que cada um fez.</p>
             <div class="fut-times" id="fut-times"></div>
           </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ANÁLISES -->
-    <section class="secao" id="analises">
-      <div class="wrap">
-        <header class="secao-cab">
-          <div>
-            <p class="kicker">Gráficos · <span data-periodo-rotulo></span></p>
-            <h2>Análises</h2>
-          </div>
-        </header>
-        <div class="grade-graficos">
           <article class="painel painel-largo">
-            <h3>Finalizador × Garçom</h3>
-            <p class="painel-desc">Gols por jogo contra assistências por jogo. As linhas tracejadas são a média do grupo.</p>
-            <p class="aviso" data-aviso-medias hidden></p>
-            <div class="grafico" id="g-perfil"></div>
-          </article>
-          <article class="painel">
-            <h3>Presença × Rendimento</h3>
-            <p class="painel-desc">Partidas jogadas contra G+A por jogo. Bolha maior = mais G+A no total.</p>
-            <p class="aviso" data-aviso-medias hidden></p>
-            <div class="grafico" id="g-presenca"></div>
-          </article>
-          <article class="painel">
-            <h3>Fatia da artilharia</h3>
-            <p class="painel-desc">Quanto cada um contribuiu para o total do grupo.</p>
-            <div class="seg seg-pequeno" id="seg-fatia" role="group" aria-label="Métrica">
-              <button data-m="gols" class="ativo">Gols</button>
-              <button data-m="assist">Assist.</button>
-              <button data-m="ga">G+A</button>
-            </div>
-            <div class="grafico" id="g-fatia" style="height:380px"></div>
+            <h3>Quem fez os gols de cada time</h3>
+            <p class="painel-desc">Cada pedaço da barra é um jogador. Clique para abrir o perfil.</p>
+            <div class="grafico" id="g-gols-time" style="height:280px"></div>
           </article>
           <article class="painel painel-largo">
-            <h3>Composição do G+A</h3>
-            <p class="painel-desc">Gols e assistências de cada jogador, ordenados pelo total.</p>
-            <div class="grafico" id="g-composicao" style="height:620px"></div>
-            <button class="btn ver-mais" type="button" data-ver-mais="composicao" hidden></button>
+            <h3>Gols em cada fut</h3>
+            <p class="painel-desc" id="gols-fut-desc"></p>
+            <div class="grafico" id="g-gols-fut" style="height:260px"></div>
           </article>
         </div>
       </div>
     </section>
+    </div>
 
+    <div class="aba-painel" id="aba-comparar" hidden>
     <!-- COMPARAR -->
     <section class="secao" id="comparar">
       <div class="wrap">
         <header class="secao-cab">
           <div>
-            <p class="kicker">Mano a mano · <span data-periodo-rotulo></span></p>
+            <p class="kicker">Mano a mano · <span id="duelo-rotulo"></span></p>
             <h2>Comparar jogadores</h2>
           </div>
           <button class="btn" id="btn-compartilhar">
@@ -303,6 +344,7 @@
             Copiar link
           </button>
         </header>
+        <div class="seg seg-duelo" id="seg-duelo-periodo" role="group" aria-label="Período da comparação"></div>
         <div class="duelo-sel">
           <div class="sel sel-a" data-lado="a">
             <label>Jogador 1</label>
@@ -324,6 +366,7 @@
         <div id="duelo"></div>
       </div>
     </section>
+    </div>
   </main>
 
   <footer class="rodape">

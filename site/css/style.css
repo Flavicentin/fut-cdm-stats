@@ -370,7 +370,10 @@ body.travado { overflow: hidden; }
 @media (max-width: 600px) { .perfil-cab { gap: 14px; } .perfil-foto { width: 76px; height: 76px; } .perfil-foto span { font-size: 30px; } }
 .perfil-info h2 { font-family: var(--fonte-titulo); font-size: clamp(48px, 10vw, 72px); line-height: .9; }
 .perfil-tag { display: inline-block; margin-top: 8px; font-size: 13px; color: var(--texto-2); }
-.perfil-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+/* 4 totais em cima, 3 médias embaixo */
+.perfil-nums { display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; margin-top: 16px; }
+.perfil-num { grid-column: span 3; min-width: 0; }
+.perfil-num:nth-child(n + 5) { grid-column: span 4; }
 .perfil-num { background: var(--surface); border: 1px solid var(--borda); border-radius: 14px; padding: 10px 12px; }
 .perfil-num b { display: block; font-family: var(--fonte-titulo); font-size: 30px; font-weight: 400; line-height: 1; }
 .perfil-num span { font-size: 12px; color: var(--texto-2); }
@@ -520,6 +523,7 @@ body.travado { overflow: hidden; }
 /* Perfil: cabeçalho do mês a mês com seletor G+A / Gols / Assist. */
 .mes-perfil-cab { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
 .mes-perfil-cab .seg-pequeno { margin-bottom: 0; }
+@media (max-width: 599px) { #seg-mes-rank { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; } #seg-mes-rank button { padding: 6px 4px; } }
 
 /* ---------------- Exportar ranking · Futs ---------------- */
 .exportar-ranking { display: flex; justify-content: flex-end; margin-top: 12px; }
@@ -541,10 +545,11 @@ body.travado { overflow: hidden; }
 .fut-time li small { color: var(--texto-2); white-space: nowrap; }
 .fut-time li[data-jogador] { cursor: pointer; }
 .fut-time li[data-jogador]:hover span { color: var(--acento); }
-.pt-cor-0 { --cor-time: #3b82f6; }
-.pt-cor-1 { --cor-time: #ef4444; }
-.pt-cor-2 { --cor-time: #eab308; }
-.pt-cor-3 { --cor-time: #a855f7; }
+:root { --time-0: #3b82f6; --time-1: #ef4444; --time-2: #eab308; --time-3: #a855f7; }
+.pt-cor-0 { --cor-time: var(--time-0); }
+.pt-cor-1 { --cor-time: var(--time-1); }
+.pt-cor-2 { --cor-time: var(--time-2); }
+.pt-cor-3 { --cor-time: var(--time-3); }
 
 /* Celular: menu numa segunda linha que rola para o lado; ranking com o detalhe embaixo do nome */
 @media (max-width: 899px) {
@@ -556,29 +561,94 @@ body.travado { overflow: hidden; }
   html { scroll-padding-top: 116px; }
 }
 @media (max-width: 380px) { .logo-ano { display: none; } }
+@media (max-width: 400px) {
+  .nav { gap: 2px; }
+  .nav a { padding: 6px; font-size: 12px; }
+}
 @media (max-width: 599px) {
   .rank-nome { flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.25; min-width: 0; }
   .rank-nome span, .rank-nome small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
-/* ============ Período (fixo no topo, junto com o cabeçalho) ============ */
-.barra-periodo { max-width: 1180px; margin: 0 auto; padding: 0 16px 10px; }
-.barra-periodo[hidden] { display: none; }
-@media (min-width: 720px) { .barra-periodo { padding: 0 28px 12px; } }
-.seg-periodo { display: flex; width: 100%; }
-.seg-periodo button { flex: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; line-height: 1.15; padding: 5px 6px; }
-.seg-periodo button b { font-size: 14px; font-weight: 700; }
-.seg-periodo button small { font-size: 11px; font-weight: 500; opacity: .75; }
-@media (min-width: 720px) { .seg-periodo { width: auto; display: inline-flex; } .seg-periodo button { flex: none; min-width: 150px; } }
+/* ============ Abas ============ */
+.aba-painel[hidden], .seg[hidden], .seg button[hidden], .secao[hidden], .painel[hidden] { display: none; }
+.subnav { max-width: 1180px; margin: 0 auto; padding: 0 16px 8px; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.subnav::-webkit-scrollbar { display: none; }
+.subnav[hidden], .subnav a[hidden], .nav a[hidden] { display: none; }
+.subnav a { flex: none; padding: 5px 10px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--texto-3); }
+.subnav a:hover, .subnav a.ativo { color: var(--acento); background: var(--acento-suave); }
+@media (min-width: 720px) { .subnav { padding: 0 28px 10px; } }
+.seg-temporada { margin: 0 0 20px; }
+.seg-duelo { margin-bottom: 16px; }
+.seg-futs { flex-wrap: wrap; margin-bottom: 14px; }
+
+/* ============ Melhores times: pódio (no celular, rolagem lateral) ============ */
+#bloco-melhores .sub-titulo:first-child { margin-top: 0; margin-bottom: 4px; }
+.melhores-times {
+  list-style: none; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 88%); gap: 10px;
+  overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; scrollbar-width: none; margin: 12px -16px 0; padding: 2px 16px 4px;
+}
+.melhores-times::-webkit-scrollbar { display: none; }
+.mt-card { --cor-pos: var(--bronze); display: flex; flex-direction: column; gap: 14px; padding: 14px; border-radius: var(--raio); background: var(--surface); border: 1px solid var(--borda); border-top: 4px solid var(--cor-pos); scroll-snap-align: start; }
+.mt-card[data-pos="1"] { --cor-pos: var(--ouro); }
+.mt-card[data-pos="2"] { --cor-pos: var(--prata); }
+.mt-card[data-abrir-fut] { cursor: pointer; }
+.mt-card[data-abrir-fut]:hover { border-color: var(--cor-pos); }
+.mt-ver { font-size: 12px; font-weight: 600; color: var(--texto-3); text-align: right; }
+.mt-card[data-abrir-fut]:hover .mt-ver { color: var(--acento); }
+.mt-cab { display: flex; align-items: center; gap: 10px; }
+.mt-medalha { font-size: 28px; line-height: 1; }
+.mt-lugar { display: block; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--cor-pos); }
+.mt-time { display: block; font-size: 13px; color: var(--texto-2); }
+.mt-gols { margin-left: auto; flex: none; font-size: 13px; color: var(--texto-2); }
+.mt-gols b { font-family: var(--fonte-titulo); font-size: 34px; line-height: 1; color: var(--texto); }
+.mt-jogadores { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 4px; }
+.mt-jogadores li { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; text-align: center; cursor: pointer; }
+.mt-foto { position: relative; display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 3px; border-radius: 50%; overflow: hidden; background: var(--surface-2); border: 2px solid var(--cor-pos); font-size: 12px; font-weight: 700; color: var(--texto-2); }
+.mt-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mt-nome { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
+.mt-jogadores li:hover .mt-nome { color: var(--acento); }
+.mt-jogadores small { font-size: 10px; color: var(--texto-3); white-space: nowrap; }
+@media (min-width: 900px) {
+  .melhores-times { grid-auto-flow: row; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 12px; margin: 12px 0 0; padding: 0; overflow: visible; }
+  .mt-card[data-pos="1"] { order: 2; padding-block: 26px; }
+  .mt-card[data-pos="2"] { order: 1; }
+  .mt-card[data-pos="3"] { order: 3; }
+  .mt-foto { width: 54px; height: 54px; }
+}
 
 /* Gráficos de médias: altura menor no celular */
-#g-perfil { height: 440px; }
-#g-presenca { height: 420px; }
+#g-perfil, #g-perfil-mes { height: 440px; }
+#g-presenca, #g-presenca-mes { height: 420px; }
 #g-perfil[hidden], #g-presenca[hidden] { display: none; }
-@media (max-width: 599px) { #g-perfil, #g-presenca { height: 340px; } }
+@media (max-width: 599px) { #g-perfil, #g-presenca, #g-perfil-mes, #g-presenca-mes { height: 340px; } }
 
-/* ============ Momento ============ */
-.momento-tit { font-family: var(--fonte-titulo); font-size: 30px; letter-spacing: .02em; margin: 0 0 12px; }
+/* ============ Temporada atual ============ */
+#secao-agora { padding-top: 28px; }
+#secao-agora .sub-titulo { margin-top: 20px; }
+.kpis-mes { margin: 12px 0 16px; }
+/* último fut: times em ordem de gols de um lado, prêmios do outro */
+.agora-fut { margin-bottom: 28px; }
+.uf-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.uf-cab .kicker { margin: 0; }
+.uf-data { font-family: var(--fonte-titulo); font-size: 34px; line-height: 1; margin: 2px 0 0; }
+.uf-corpo { display: grid; gap: 18px; }
+@media (min-width: 800px) { .uf-corpo { grid-template-columns: 3fr 2fr; gap: 32px; align-items: center; } }
+.uf-times { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.uf-time { display: grid; grid-template-columns: 60px 1fr 34px; align-items: center; gap: 10px; }
+.uf-nome { font-size: 14px; font-weight: 600; color: var(--texto-2); white-space: nowrap; }
+.uf-barra { height: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.uf-barra i { display: block; height: 100%; border-radius: inherit; background: var(--cor-time); }
+.uf-time b { font-family: var(--fonte-titulo); font-size: 28px; line-height: 1; text-align: right; color: var(--texto-2); }
+.uf-time.lider-fut .uf-nome, .uf-time.lider-fut b { color: var(--texto); }
+.uf-premios { display: grid; gap: 8px; }
+.uf-premio { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.uf-premio .lider-titulo { display: block; margin: 0 0 2px; font-size: 11px; }
+.uf-nomes { font-size: 15px; color: var(--texto-3); }
+.uf-nomes b { color: var(--texto); cursor: pointer; }
+.uf-nomes b:hover { color: var(--acento); }
+.uf-valor { flex: none; font-size: 13px; color: var(--texto-2); }
+.uf-valor b { font-size: 18px; color: var(--texto); }
 /* cards do mês: rolagem lateral no celular, grade no desktop */
 .momento-cards {
   display: grid; grid-auto-flow: column; grid-auto-columns: minmax(160px, 46%); gap: 10px;
@@ -609,17 +679,13 @@ body.travado { overflow: hidden; }
 .forma th, .forma td { padding: 7px 6px; text-align: right; border-bottom: 1px solid var(--borda); white-space: nowrap; }
 .forma tbody th { text-align: left; font-weight: 600; color: var(--texto-2); }
 .forma thead th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--texto-3); }
-.forma thead th.atual { color: var(--acento); }
 .forma tr:last-child th, .forma tr:last-child td { border-bottom: 0; }
 .forma td.sem { color: var(--texto-3); }
 @media (max-width: 599px) { .forma { font-size: 13px; } .forma th, .forma td { padding: 7px 4px; } }
 
-/* Celular: período compacto, numa linha só, abaixo do menu de seções */
+/* Celular: logo, menu e submenu ocupam mais altura no topo */
 @media (max-width: 899px) {
-  html { scroll-padding-top: 156px; }
-  .barra-periodo { padding-bottom: 8px; }
-  .seg-periodo button { min-height: 38px; padding: 4px 6px; }
-  .seg-periodo button small { display: none; }
+  html { scroll-padding-top: 148px; }
 }
 
 /* Listas longas: botão "Ver todos" */

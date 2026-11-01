@@ -7,6 +7,12 @@ Site público: https://fut-cdm.vercel.app · Admin: https://fut-cdm.vercel.app/a
 - **Dados**: banco Postgres no Supabase. O site lê a view `v_temporada_json`; se o Supabase falhar, usa `site/data/2026.json` como reserva.
 - **Fotos**: bucket `fotos-jogadores` no Supabase Storage (enviadas pelo admin, aba Fotos).
 
+## Abas do site
+- **Temporada atual** (abre aqui): abre no último mês com dados, com os outros meses logo abaixo: donos do mês, números, último fut, ranking e gráficos. A corrida do mês precisa de 2+ futs no app, e as análises do mês, de jogos lançados; sem isso, esses gráficos somem.
+- **Todos os dados**: totais, rankings, troféus, evolução e análises. Com 2 ou mais temporadas aparece o seletor, com a opção "Todas".
+- **Futs**: pódio dos melhores times da história (mais gols em um fut) e cada partida encerrada, escolhendo o mês e depois o fut, com gráficos de gols por time e por fut.
+- **Comparar**: mano a mano, com período próprio.
+
 ## Admin (só adms)
 - **Partidas**: sortear os 4 times (sorteio puro), deixar a próxima partida agendada, anotar gols e assistências ao vivo e encerrar. Ao encerrar, soma no mês e na temporada (+1 jogo) e calcula MVP, time da semana e as outras honrarias; sai o relatório para o grupo.
 - **Temporada / Mês / Honrarias / Notas Over**: editar ou colar a aba da planilha. Toda mudança vai para **Revisões** e só entra no site depois que outro adm aprova.
@@ -28,4 +34,4 @@ Regras: as médias só contam quem tem **10+ jogos**; a coluna BALLON DOR é ign
 ## Ver localmente
 `python -m http.server 8765 -d site` e abra http://localhost:8765
 
-Links úteis para mandar no grupo: `#jogador/roger`, `#comparar/roger/erick`, `#comparar/roger/erick/notas`, `#trofeus`, `#mes-a-mes`, `?temporada=2026`.
+Links úteis para mandar no grupo: `#temporada-atual`, `#todos-os-dados`, `#futs`, `#jogador/roger`, `#comparar/roger/erick`, `#comparar/roger/erick/notas`, `#trofeus`, `?temporada=2026`.
