@@ -764,7 +764,7 @@
       </div>
       ${agendadas.length ? `<h2 class="adm-sub">Próxima partida</h2>
       <ul class="adm-lista">${agendadas.map(p => `
-        <li><span class="grow"><b>Partida de ${dataBR(p.data)}</b> <span class="adm-tag adm-tag-agendada">sorteada</span> <small style="color:var(--texto-3)">por ${esc(p.autor || '?')}</small></span>
+        <li><span class="grow"><b>Partida de ${dataBR(p.data)}</b> <span class="adm-tag adm-tag-agendada">agendada</span> <small style="color:var(--texto-3)">por ${esc(p.autor || '?')}</small></span>
           <button class="btn" data-editar-agendada="${p.id}">Editar times</button>
           <button class="btn btn-primario" data-iniciar-agendada="${p.id}">Iniciar</button></li>`).join('')}</ul>` : ''}
       ${abertas.length ? `<h2 class="adm-sub">Em andamento</h2>
@@ -785,11 +785,16 @@
     const modo = np.modo || 'nova';
     const nomeDe = id => np.nomesNovos[id] || st.porId[id]?.nome || id;
     const titulo = { nova: 'Nova partida', agendar: 'Times sorteados', editar: 'Próxima partida' }[modo];
+    const futura = np.data > hoje();
     const dica = modo === 'nova'
-      ? 'Toque no time e depois nos jogadores que vão jogar nele.'
+      ? `Toque no time e depois nos jogadores que vão jogar nele.${futura ? ' A data é no futuro: a partida fica salva como próxima partida e começa no dia, pelo botão Iniciar.' : ''}`
       : 'Para trocar: toque num time para selecioná-lo e depois no nome de alguém de outro time para trazê-lo. O × tira o jogador (quem desmarcou) e a lista abaixo coloca outro no time selecionado.';
     const botoes = {
-      nova: `<button class="btn btn-primario" id="btn-comecar-partida">Começar partida (${np.times.flat().length})</button>`,
+      // data no futuro não pode começar agora: só fica salva como próxima partida
+      nova: futura
+        ? `<button class="btn btn-primario" id="btn-salvar-agendada">Salvar próxima partida (${np.times.flat().length})</button>`
+        : `<button class="btn" id="btn-salvar-agendada">Salvar para depois</button>
+        <button class="btn btn-primario" id="btn-comecar-partida">Começar agora (${np.times.flat().length})</button>`,
       agendar: `<button class="btn" id="btn-sortear-de-novo">🎲 Sortear de novo</button>
         <button class="btn btn-primario" id="btn-salvar-agendada">Salvar próxima partida</button>`,
       editar: `<button class="btn btn-perigo" id="btn-cancelar-agendada">Cancelar partida</button>
@@ -896,7 +901,7 @@
   async function salvarAgendada({ iniciar = false } = {}) {
     const np = st.novaPartida;
     if (np.times.filter(ids => ids.length).length < 2) return toast('Coloque jogadores em pelo menos 2 times.');
-    $$('#btn-salvar-agendada, #btn-iniciar-agendada').forEach(b => { b.disabled = true; });
+    $$('#btn-salvar-agendada, #btn-iniciar-agendada, #btn-comecar-partida').forEach(b => { b.disabled = true; });
     try {
       await gravarNovosNP(np);
       let id = np.id;
@@ -920,7 +925,7 @@
     } catch (e) {
       console.error(e);
       toast('Erro ao salvar: ' + erroLegivel(e));
-      $$('#btn-salvar-agendada, #btn-iniciar-agendada').forEach(b => { b.disabled = false; });
+      $$('#btn-salvar-agendada, #btn-iniciar-agendada, #btn-comecar-partida').forEach(b => { b.disabled = false; });
     }
   }
 
@@ -1001,6 +1006,7 @@
   async function comecarPartida() {
     const np = st.novaPartida;
     if (np.times.filter(ids => ids.length).length < 2) return toast('Coloque jogadores em pelo menos 2 times.');
+    if (np.data > hoje()) return salvarAgendada();
     const btn = $('#btn-comecar-partida');
     btn.disabled = true;
     try {
@@ -1466,7 +1472,13 @@
 
     const conteudo = $('#conteudo');
     conteudo.addEventListener('input', e => {
-      if (e.target.id === 'np-data') { st.novaPartida.data = e.target.value || hoje(); return; }
+      if (e.target.id === 'np-data') {
+        const antes = st.novaPartida.data > hoje();
+        st.novaPartida.data = e.target.value || hoje();
+        // trocar entre hoje e uma data futura muda os botões (começar agora x salvar para depois)
+        if (antes !== st.novaPartida.data > hoje()) renderNovaPartida();
+        return;
+      }
       if (e.target.id === 'np-busca') { st.novaPartida.busca = e.target.value; renderListaNP(); return; }
       if (e.target.id === 'so-busca') { st.sorteio.busca = e.target.value; renderListaSorteio(); return; }
       if (e.target.id === 'so-data') { st.sorteio.data = e.target.value || hoje(); return; }
